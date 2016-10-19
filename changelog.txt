@@ -1,0 +1,14 @@
+###################
+## VKA CHANGELOG ##
+###################
+
+Version numbering: x.y.z.w
+	x: Full revision. Indicates a large re-write.
+	y: Major revision. Indicates a new world was added.
+	z: Minor revision. Indicates that an existing world was extended or improved.
+	w: Bug revision. Indicates that errors in the previous version were corrected.
+
+## v0.0.0.0
+* Initial commit.
+* Basic folder structure laid out.
+* Index page created but not styled.

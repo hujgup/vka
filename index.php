@@ -19,7 +19,7 @@
 	<article class="content">
 		<header>
 			<h1>Vriska's Kinky Adventure</h1>
-			<p>v0.1.0-pre-alpha</p>
+			<p>v0.0.0.0 (Pre-Alpha)</p>
 			<p><strong>By Echo</strong></p>
 			<p><a href="http://inhibitionsnullandvoid.tumblr.com">inhibitionsnullandvoid.tumblr.com</a></p>
 		</header>
