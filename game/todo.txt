@@ -7,6 +7,8 @@ Confirm button appears
 Click confirm button
 On move action happens
 
+(Since this deprecates the old movement control area, repurpose that space for the quest log)
+
 Localization string styling:
 [+c pesterlog vriska]AG: 8[/c]
 Would result in the following HTML:
@@ -16,3 +18,4 @@ And those classas can be defined in some file in style/app
 COM: Make sure all strings are stored as COM.Strings
 
 Copy over global.css into project folder and modify index references
+
