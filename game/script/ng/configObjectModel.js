@@ -293,11 +293,20 @@ var COM = new (function() {
 	var ConfigParser = new (function() {
 		var _blockComment = /#~[\s\S]*?~#/g;
 		var _inlineComment = /[\s]*##[\s\S]*$/;
+		var _specialChars = [
+			"\\",
+			"#",
+			"~",
+			"{",
+			"}",
+			"=",
+			"\n"
+		];
 
 		var _escapeCommon = function(str,prepend) {
 			var res = [];
 			var escapeNext = false;
-			for (var i = 0; i < str.length; i++) {
+			for (var i = 0; i < str.rawString.length; i++) {
 				if (escapeNext) {
 					res.push(prepend+str[i]);
 					escapeNext = false;
@@ -341,14 +350,19 @@ var COM = new (function() {
 			return res;
 		};
 		this.escape = function(str) {
-			return _escapeCommon(str.split(""),"\\");
+			var res = "";
+			var c;
+			for (var i = 0; i < str.length; i++) {
+				if (_specialChars.indexOf(c) !== -1) {
+					res += "\\";
+				}
+				res += c;
+			}
+			return new _this.String(res);
 		};
 		this.unescape = function(str) {
-			if (Array.isArray(str)) {
-				str = str.join("");
-			}
-			// Two splits because input array might not be split on every character
-			return _escapeCommon(str.split(""),"").join("");
+			// Legacy
+			return str.unescaped;
 		};
 		this.prepareContents = function(str,encapsulatorName) {
 			var newLine = this.getNewLineChars(str);
@@ -381,7 +395,7 @@ var COM = new (function() {
 	var _arraySplit = function(arr,delim,limit,concat) {
 		if (typeof limit !== "undefined") {
 			if (limit < 2) {
-				// TODO: throw exeption, limit must be 2 or more
+				throw new Error("limit must be 2 or more, was "+linit+".");
 			} else {
 				limit = Math.floor(limit);
 			}
@@ -829,10 +843,11 @@ var COM = new (function() {
 			return res;
 		};
 		var _updateAssociations = function(key,value) {
+			key = new _this.String(key).rawString;
 			if (!_associations.hasOwnProperty(key)) {
 				_associationsCount++;
 			}
-			_associations[key] = value;
+			_associations[key] = new _this.String(value);
 		};
 		var _getTabbing = function(tab) {
 			var res = "";
@@ -847,11 +862,11 @@ var COM = new (function() {
 			tab = _getTabbing(tab);
 			var res = tab+"## Entries"+_newLine;
 			for (var i = 0; i < _entries.length; i++) {
-				res += tab+_entries[i]+_newLine;
+				res += tab+_entries[i].rawString+_newLine;
 			}
 			res += _newLine+tab+"## Associations"+_newLine;
 			_objectForEach(_associations,function(key,value) {
-				res += tab+key+" = "+value+_newLine;
+				res += tab+key+" = "+value.rawString+_newLine;
 			});
 			res += _newLine+tab+"## Children"+_newLine;
 			var tabCount = tab.length + 1;
@@ -862,7 +877,7 @@ var COM = new (function() {
 		};
 		var _internalGetOuterContents = function(tab) {
 			tab = _getTabbing(_applyDefault(tab,0));
-			var res = tab+_name+" {"+_newLine;
+			var res = tab+_name.rawString+" {"+_newLine;
 			res += _internalGetContents(tab.length + 1);
 			res += _newLine+tab+"}";
 			return res;
@@ -875,15 +890,15 @@ var COM = new (function() {
 			return res;
 		};
 		var _parseAssociation = function(line) {
-			//console.log(line);
-			line = line.join("")
-			var l = _list(line.split("=",2));
-			//var l = _list(_arraySplit(line,"=",2));
-			//console.log(l);
-			_this2.setAssociation(ConfigParser.unescape(l.key.trim()),ConfigParser.unescape(l.value.trim()));
+			var index = line.indexOfCharacter("=");
+			var l = _list([
+				line.rawString.substring(0,index).trim(),
+				new _this.String(line.rawString.substring(index + 1).trim());
+			]);
+			_this2.setAssociation(l.key,l.value);
 		};
 		var _parseContents = function(contents) {
-			contents = contents.split(_newLine);
+			contents = contents.rawString.split(_newLine);
 			var unescaped;
 			var line;
 			for (var i = 0; i < contents.length; i++) {

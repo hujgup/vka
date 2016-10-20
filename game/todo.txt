@@ -1,5 +1,3 @@
-Conbination moduses
-
 Command structure is a set of select boxes or text input fields
 So "move to room x" would be like
 Menu 1 -> Select "Move"
@@ -18,6 +16,4 @@ Would result in the following HTML:
 And those classas can be defined in some file in style/app
 
 COM: Make sure all strings are stored as COM.Strings
-
-Copy over global.css into project folder and modify index references
 
