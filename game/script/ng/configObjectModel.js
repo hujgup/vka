@@ -293,20 +293,11 @@ var COM = new (function() {
 	var ConfigParser = new (function() {
 		var _blockComment = /#~[\s\S]*?~#/g;
 		var _inlineComment = /[\s]*##[\s\S]*$/;
-		var _specialChars = [
-			"\\",
-			"#",
-			"~",
-			"{",
-			"}",
-			"=",
-			"\n"
-		];
 
 		var _escapeCommon = function(str,prepend) {
 			var res = [];
 			var escapeNext = false;
-			for (var i = 0; i < str.rawString.length; i++) {
+			for (var i = 0; i < str.length; i++) {
 				if (escapeNext) {
 					res.push(prepend+str[i]);
 					escapeNext = false;
@@ -350,19 +341,14 @@ var COM = new (function() {
 			return res;
 		};
 		this.escape = function(str) {
-			var res = "";
-			var c;
-			for (var i = 0; i < str.length; i++) {
-				if (_specialChars.indexOf(c) !== -1) {
-					res += "\\";
-				}
-				res += c;
-			}
-			return new _this.String(res);
+			return _escapeCommon(str.split(""),"\\");
 		};
 		this.unescape = function(str) {
-			// Legacy
-			return str.unescaped;
+			if (Array.isArray(str)) {
+				str = str.join("");
+			}
+			// Two splits because input array might not be split on every character
+			return _escapeCommon(str.split(""),"").join("");
 		};
 		this.prepareContents = function(str,encapsulatorName) {
 			var newLine = this.getNewLineChars(str);
@@ -395,7 +381,7 @@ var COM = new (function() {
 	var _arraySplit = function(arr,delim,limit,concat) {
 		if (typeof limit !== "undefined") {
 			if (limit < 2) {
-				throw new Error("limit must be 2 or more, was "+linit+".");
+				// TODO: throw exeption, limit must be 2 or more
 			} else {
 				limit = Math.floor(limit);
 			}
@@ -497,17 +483,6 @@ var COM = new (function() {
 				res.push(arr[i]);
 			}
 			res = res.concat(after(arr[i]));
-		}
-		return res;
-	};
-	var _buildString = function(raw,callback,startIndex) {
-		startIndex = _applyDefault(startIndex,0);
-		var res = {
-			str: new _this.String(),
-			iterated: 0
-		};
-		for (var i = startIndex; i < raw.length; i++) {
-			if (callback(res.str,
 		}
 		return res;
 	};
@@ -786,68 +761,16 @@ var COM = new (function() {
 			});
 		};
 
-		_defineProperty("owner",function() {
-			return _owner;
-		});
-		_defineProperty("parent",function() {
-			return _parent;
-		});
-		_defineProperty("name",function() {
-			return _name;
-		});
-		_defineProperty("entries",function() {
-			return _entriesImmutable;
-		});
-		_defineProperty("associations",function() {
-			return _associationsImmutable;
-		});
-		_defineProperty("children",function() {
-			return _childrenImmutable;
-		});
-		_defineProperty("newLine",function() {
-			return _newLine;
-		});
-		_defineProperty("entriesLength",function() {
-			return _entries.length;
-		});
-		_defineProperty("associationsLength",function() {
-			return _associationsLength;
-		});
-		_defineProperty("childrenLength",function() {
-			return _children.length;
-		});
-		_defineProperty("hasEntries",function() {
-			return _entries.length !== 0;
-		});
-		_defineProperty("hasAssociations",function() {
-			return _associationsLength !== 0;
-		});
-		_defineProperty("hasChildren",function() {
-			return _children.length !== 0;
-		});
-		_defineProperty("success",function() {
-			return _success;
-		});
-
-		_defineMethod("_igcRecursion",function(tab) {
-			return _internalGetContents(tab);
-		});
-		_defineMethod("_scp",function(parent,owner) {
-			_parent = parent;
-			_owner = owner;
-		});
-
 		var _listable = function(node) {
 			var res = new _this.Node();
 			res.copyFrom(node);
 			return res;
 		};
 		var _updateAssociations = function(key,value) {
-			key = new _this.String(key).rawString;
 			if (!_associations.hasOwnProperty(key)) {
 				_associationsCount++;
 			}
-			_associations[key] = new _this.String(value);
+			_associations[key] = value;
 		};
 		var _getTabbing = function(tab) {
 			var res = "";
@@ -862,11 +785,11 @@ var COM = new (function() {
 			tab = _getTabbing(tab);
 			var res = tab+"## Entries"+_newLine;
 			for (var i = 0; i < _entries.length; i++) {
-				res += tab+_entries[i].rawString+_newLine;
+				res += tab+_entries[i]+_newLine;
 			}
 			res += _newLine+tab+"## Associations"+_newLine;
 			_objectForEach(_associations,function(key,value) {
-				res += tab+key+" = "+value.rawString+_newLine;
+				res += tab+key+" = "+value+_newLine;
 			});
 			res += _newLine+tab+"## Children"+_newLine;
 			var tabCount = tab.length + 1;
@@ -877,7 +800,7 @@ var COM = new (function() {
 		};
 		var _internalGetOuterContents = function(tab) {
 			tab = _getTabbing(_applyDefault(tab,0));
-			var res = tab+_name.rawString+" {"+_newLine;
+			var res = tab+_name+" {"+_newLine;
 			res += _internalGetContents(tab.length + 1);
 			res += _newLine+tab+"}";
 			return res;
@@ -890,15 +813,15 @@ var COM = new (function() {
 			return res;
 		};
 		var _parseAssociation = function(line) {
-			var index = line.indexOfCharacter("=");
-			var l = _list([
-				line.rawString.substring(0,index).trim(),
-				new _this.String(line.rawString.substring(index + 1).trim());
-			]);
-			_this2.setAssociation(l.key,l.value);
+			//console.log(line);
+			line = line.join("")
+			var l = _list(line.split("=",2));
+			//var l = _list(_arraySplit(line,"=",2));
+			//console.log(l);
+			_this2.setAssociation(ConfigParser.unescape(l.key.trim()),ConfigParser.unescape(l.value.trim()));
 		};
 		var _parseContents = function(contents) {
-			contents = contents.rawString.split(_newLine);
+			contents = contents.split(_newLine);
 			var unescaped;
 			var line;
 			for (var i = 0; i < contents.length; i++) {
@@ -1114,6 +1037,57 @@ var COM = new (function() {
 			_wipeChildren();
 		};
 
+		_defineProperty("owner",function() {
+			return _owner;
+		});
+		_defineProperty("parent",function() {
+			return _parent;
+		});
+		_defineProperty("name",function() {
+			return new _this.String(_name);
+		});
+		_defineProperty("entries",function() {
+			return _entriesImmutable;
+		});
+		_defineProperty("associations",function() {
+			return _associationsImmutable;
+		});
+		_defineProperty("children",function() {
+			return _childrenImmutable;
+		});
+		_defineProperty("newLine",function() {
+			return _newLine;
+		});
+		_defineProperty("entriesLength",function() {
+			return _entries.length;
+		});
+		_defineProperty("associationsLength",function() {
+			return _associationsLength;
+		});
+		_defineProperty("childrenLength",function() {
+			return _children.length;
+		});
+		_defineProperty("hasEntries",function() {
+			return _entries.length !== 0;
+		});
+		_defineProperty("hasAssociations",function() {
+			return _associationsLength !== 0;
+		});
+		_defineProperty("hasChildren",function() {
+			return _children.length !== 0;
+		});
+		_defineProperty("success",function() {
+			return _success;
+		});
+
+		_defineMethod("_igcRecursion",function(tab) {
+			return _internalGetContents(tab);
+		});
+		_defineMethod("_scp",function(parent,owner) {
+			_parent = parent;
+			_owner = owner;
+		});
+
 		_defineMethod("childArrayToNode",function(arr) {
 			var res = new _this.Node(undefined,_newLine);
 			res._scp(null,res);
@@ -1147,7 +1121,7 @@ var COM = new (function() {
 		_defineMethod("getEntry",function(position) {
 			var res;
 			if (position >= 0 && position < _entries.length) {
-				res = _entries[position];
+				res = new _this.String(_entries[position]);
 			}
 			return res;
 		});
@@ -1183,7 +1157,7 @@ var COM = new (function() {
 			return res;
 		});
 		_defineMethod("getAssociation",function(key) {
-			return _this2.hasAssociation(key) ? _associations[key] : undefined;
+			return _this2.hasAssociation(key) ? new _this.String(_associations[key]) : undefined;
 		});
 		_defineMethod("setAssociation",function(key,value) {
 			if (typeof value === "undefined") {
@@ -1407,12 +1381,6 @@ var COM = new (function() {
 		var _this2 = this;
 		var _globalNode;
 
-		Object.defineProperty(this,"globalNode",{
-			get: function() {
-				return _globalNode;
-			}
-		});
-
 		var _defineMethod = function(name,func) {
 			Object.defineProperty(_this2,name,{
 				value: func,
@@ -1421,6 +1389,11 @@ var COM = new (function() {
 			});
 		};
 
+		Object.defineProperty(this,"globalNode",{
+			get: function() {
+				return _globalNode;
+			}
+		});
 		_defineMethod("getAllNodes",function(pureArray) {
 			var res = [_globalNode].concat(_globalNode.getAllChildren(true));
 			if (!pureArray) {
