@@ -1,3 +1,5 @@
+Conbination moduses
+
 Command structure is a set of select boxes or text input fields
 So "move to room x" would be like
 Menu 1 -> Select "Move"

@@ -17,6 +17,10 @@ Version numbering: x.y.z.w
 		improved.
 	w: Bug revision. Indicates that errors in the previous version were corrected.
 
+## v0.0.2.1
+* Localized hash map modus.
+* Began work on combination moduses.
+
 ## v0.0.2.0
 * Added test case for room images.
 * Updated localization with new engine strings.
