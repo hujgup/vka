@@ -1,0 +1,16 @@
+Command structure is a set of select boxes or text input fields
+So "move to room x" would be like
+Menu 1 -> Select "Move"
+Menu 2 appears
+Menu 2 -> Select "RESIDENTIAL CORRIDOR ALPHA"
+Confirm button appears
+Click confirm button
+On move action happens
+
+Localization string styling:
+[+c pesterlog vriska]AG: 8[/c]
+Would result in the following HTML:
+<span class="pesterlog vriska">AG: 8</span>
+And those classas can be defined in some file in style/app
+
+Make sure that COM string escaping is handled properly (i.e. anything after \ is a literal unless it's \n, in which case it's \n)
