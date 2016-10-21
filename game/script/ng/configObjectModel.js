@@ -246,6 +246,13 @@ function ImmutableObject(obj) {
 		}
 		return res;
 	};
+	this.forEach = function(callback) {
+		for (var key in _obj) {
+			if (_obj.hasOwnProperty(key)) {
+				callback(key,_obj[key]);
+			}
+		}
+	};
 	this.get = function(key) {
 		return _obj[key];
 	};
@@ -499,7 +506,7 @@ var COM = new (function() {
 		var StringComponent = function(c,escaped) {
 			this.char = c;
 			this.escaped = escaped;
-			this.isNewLine = c === "n" && escaped;
+			this.isNewLine = false; // Legacy, functionality superseded by formatting tags
 		};
 
 		var _generateStrings = function() {
@@ -603,11 +610,19 @@ var COM = new (function() {
 			}
 			return _unescaped;
 		});
+		_defineProperty("length",function() {
+			return _contents.length;
+		});
 		_defineProperty("isEmpty",function() {
 			return _contents.length !== 0;
 		});
 		_defineMethod("characterAt",function(index) {
 			return _contents[index];
+		});
+		_defineMethod("forEach",function(callback) {
+			for (var i = 0; i < _contents.length; i++) {
+				callback(_contents[i],i);
+			}
 		});
 		_defineMethod("indexOfCharacter",function(c) {
 			return _internalIndexOf(_resolveEscaped(c));
@@ -709,7 +724,7 @@ var COM = new (function() {
 			var index = _this2.indexOfString(str);
 			var res = index !== -1;
 			if (res) {
-				res = _this2.removeStringAt(,str.length);
+				res = _this2.removeStringAt(str.length);
 			}
 			return res;
 		});
@@ -1152,12 +1167,12 @@ var COM = new (function() {
 		_defineMethod("hasAssociation",function(key,value) {
 			var res = _associations.hasOwnProperty(key);
 			if (res && typeof value !== "undefined") {
-				res = _associations[key] === value;
+				res = _associations[key].rawString === value;
 			}
 			return res;
 		});
 		_defineMethod("getAssociation",function(key) {
-			return _this2.hasAssociation(key) ? new _this.String(_associations[key]) : undefined;
+			return _this2.hasAssociation(key) ? _associations[key] : undefined;
 		});
 		_defineMethod("setAssociation",function(key,value) {
 			if (typeof value === "undefined") {
@@ -1166,7 +1181,7 @@ var COM = new (function() {
 				if (!_this2.hasAssociation(key)) {
 					_associationsLength++;
 				}
-				_associations[key] = value;
+				_associations[key] = new _this.String(value);
 			}
 		});
 		_defineMethod("removeAssociation",function(key) {

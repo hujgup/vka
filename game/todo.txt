@@ -9,11 +9,4 @@ On move action happens
 
 (Since this deprecates the old movement control area, repurpose that space for the quest log)
 
-Localization string styling:
-[+c pesterlog vriska]AG: 8[/c]
-Would result in the following HTML:
-<span class="pesterlog vriska">AG: 8</span>
-And those classas can be defined in some file in style/app
-
-COM: Make sure all strings are stored as COM.Strings
 

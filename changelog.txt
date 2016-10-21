@@ -17,6 +17,14 @@ Version numbering: x.y.z.w
 		improved.
 	w: Bug revision. Indicates that errors in the previous version were corrected.
 
+## v0.1.0.0
+* Localization parsing added.
+* Added default image.
+* Restructured localization folder.
+* COM.String added.
+* Swapped COM string outputs to report COM.String.
+* User stylesheet parsing added.
+
 ## v0.0.2.1
 * Localized hash map modus.
 * Began work on combination moduses.
