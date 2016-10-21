@@ -9,4 +9,3 @@ On move action happens
 
 (Since this deprecates the old movement control area, repurpose that space for the quest log)
 
-

@@ -1,6 +1,13 @@
 var Engine = new (function() {
 	var _this = this;
 
+	var _defineMethod = function(name,func) {
+		Object.defineProperty(_this,name,{
+			value: func,
+			writable: false,
+			enumerable: false
+		});
+	};
 	var _defineObject = function(name,func) {
 		Object.defineProperty(_this,name,{
 			value: func,
@@ -49,7 +56,7 @@ var Engine = new (function() {
 		_render();
 	};
 
-	Object.defineProperty(this,"LocalizationMap",{
+	Object.defineProperty(_this,"LocalizationMap",{
 		value: new (function() {
 			var _this2 = this;
 
@@ -254,6 +261,11 @@ var Engine = new (function() {
 		});
 	};
 
+	_defineMethod("logPush",function(html) {
+		_log.innerHTML += html;
+		_log.scrollTop = _log.scrollHeight
+	});
+
 	window.addEventListener("DOMContentLoaded",function() {
 		_container = document.getElementById("container");
 		_containerContent = container.innerHTML;
@@ -266,7 +278,8 @@ var Engine = new (function() {
 			_inv = document.getElementById("inventory");
 			_actions = document.getElementById("actions");
 			_quests = document.getElementById("quests");
-			_log.innerHTML = _this.LocalizationMap.getString("@init");
+			_log.textContent = "";
+			_this.logPush(_this.LocalizationMap.getString("@init"));
 			_inv.innerHTML = _this.LocalizationMap.getString("@inventoryTitle");
 			_actions.innerHTML = _this.LocalizationMap.getString("@actionsTitle");
 			_quests.innerHTML = _this.LocalizationMap.getString("@questLogTitle");

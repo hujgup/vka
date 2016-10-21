@@ -1,4 +1,5 @@
 html, body {
+	width:100%;
 	height:100%;
 	overflow-x:hidden;
 	overflow-y:hidden;
@@ -6,9 +7,11 @@ html, body {
 .container {
 	position:relative;
 	display:block;
-	margin:4px auto;
+	margin:0 auto;
+	padding:4px 0 8px 0;
 	width:95%;
 	height:100%;
+	box-sizing:border-box;
 }
 .custom {
 	position:relative;
@@ -17,6 +20,7 @@ html, body {
 	height:100%;
 	vertical-align:top;
 	white-space:normal;
+	box-sizing:border-box;
 }
 .custom > * {
 	box-sizing:border-box;
