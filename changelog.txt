@@ -17,6 +17,13 @@ Version numbering: x.y.z.w
 		improved.
 	w: Bug revision. Indicates that errors in the previous version were corrected.
 
+## v0.1.1.0
+* Made localization element parsing more general.
+* Logging methods now retain references.
+* Logging methods now scroll the log to the first new element added.
+* Added Homestuck styling to log.
+* Fixed bug with COM association parsing and escaped = symbols in values.
+
 ## v0.1.0.0
 * Localization parsing added.
 * Added default image.

@@ -630,6 +630,24 @@ var COM = new (function() {
 		_defineMethod("indexOfString",function(str) {
 			return _this2.rawString.indexOf(str);
 		});
+		_defineMethod("substring",function(start,length) {
+			start = typeof start === "number" ? start : 0;
+			var end = typeof length === "number" ? start + length : _contents.length;
+			var res = new _this.String();
+			var newCnt = _contents.slice(start,end);
+			var c;
+			var cOut;
+			for (var i = 0; i < newCnt.length; i++) {
+				c = newCnt[i];
+				cOut = "";
+				if (c.escaped) {
+					cOut += "\\";
+				}
+				cOut += c.char;
+				res.appendCharacter(cOut);
+			}
+			return res;
+		});
 		_defineMethod("appendCharacter",function(c) {
 			_valid = false;
 			_contents.push(_resolveEscaped(c));
@@ -828,12 +846,11 @@ var COM = new (function() {
 			return res;
 		};
 		var _parseAssociation = function(line) {
-			//console.log(line);
-			line = line.join("")
-			var l = _list(line.split("=",2));
-			//var l = _list(_arraySplit(line,"=",2));
-			//console.log(l);
-			_this2.setAssociation(ConfigParser.unescape(l.key.trim()),ConfigParser.unescape(l.value.trim()));
+			line = new _this.String(line.join(""));
+			var index = line.indexOfCharacter("=");
+			var key = line.substring(0,index).rawString;
+			var value = line.substring(index + 1).rawString;
+			_this2.setAssociation(ConfigParser.unescape(key.trim()),ConfigParser.unescape(value.trim()));
 		};
 		var _parseContents = function(contents) {
 			contents = contents.split(_newLine);

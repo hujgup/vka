@@ -56,170 +56,200 @@ var Engine = new (function() {
 		_render();
 	};
 
-	Object.defineProperty(_this,"LocalizationMap",{
-		value: new (function() {
-			var _this2 = this;
+	var LocalizationMap = new (function() {
+		var _this2 = this;
 
-			var _defineMethod = function(name,func) {
-				Object.defineProperty(_this2,name,{
-					value: func,
-					writable: false,
-					enumerable: false
-				});
-			};
-
-			var _strings = {};
-			var _groups = {};
-
-			_defineMethod("hasString",function(key) {
-				return _strings.hasOwnProperty(key);
+		var _defineMethod = function(name,func) {
+			Object.defineProperty(_this2,name,{
+				value: func,
+				writable: false,
+				enumerable: false
 			});
-			_defineMethod("getString",function(key) {
-				return _this2.hasString(key) ? _strings[key] : undefined;
-			});
-			_defineMethod("setString",function(key,value) {
+		};
+
+		var ElementId = function(id,ele,selfClosing,className,argsApplier) {
+			var _hasClassName = typeof className !== "undefined";
+			var _className = className;
+			var _classId = " class='";
+			var _standardApplier = function(args,hasClassName,className) {
 				var res = "";
-				var openBracket = false;
-				var inOpenBlock = false;
-				var inArgs = false;
-				var inCloseBlock = false;
-				var noBlocks = true;
-				var idMap = [{
-					id: "s",
-					ele: "span",
-					selfClosing: false
-				},
-				{
-					id: "b",
-					ele: "br",
-					selfClosing: true
-				},
-				{
-					id: "p",
-					ele: "p",
-					selfClosing: false
-				},
-				{
-					id: "H",
-					ele: "h2",
-					selfClosing: false
-				},
-				{
-					id: "h",
-					ele: "h2",
-					selfClosing: false
-				}];
-				var block = {
-					id: "",
-					args: ""
-				};
-				var _pushChar = function(c) {
-					if (inArgs) {
-						block.args += c;
-					} else {
-						block.id += c;
-					}
-				};
-				var _formatArgs = function() {
-					var res = "";
-					if (block.args.length !== 0) {
-						res += " class='"+block.args+"'";
-					}
-					return res;
-				};
-				var _findId = function(context,callback,ignoreSelfClosing) {
-					var id;
-					for (var i = 0; i < idMap.length; i++) {
-						id = idMap[i];
-						if (block.id === id.id) {
-							if (ignoreSelfClosing && id.selfClosing) {
-								throw new Error(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.");
-							} else {
-								callback(id);
-								return;
-							}
-						}
-					}
-					throw new Error("Unknown "+context+" tag +"+block.id+" in a localization file.");
-				};
-				value.forEach(function(c) {
-					if (inOpenBlock) {
-						if (c.escaped) {
-							_pushChar(c.char);
-						} else if (!inArgs && c.char === " ") {
-							inArgs = true;
-						} else if (c.char === "]") {
-							inOpenBlock = false;
-							inArgs = false;
-							_findId("opening",function(id) {
-								res += "<"+id.ele+_formatArgs();
-								if (id.selfClosing) {
-									res += " /";
-								}
-								res += ">";
-							},false);
-						} else {
-							_pushChar(c.char);
-						}
-					} else if (inCloseBlock) {
-						if (c.isNewLine) {
-							_pushChar("<br />");
-						} else if (c.escaped) {
-							_pushChar(c.char);
-						} else if (c.char === "]") {
-							inCloseBlock = false;
-							_findId("closing",function(id) {
-								res += "</"+id.ele+">";
-							},true);
-						} else {
-							_pushChar(c.char);
-						}
-					} else if (openBracket) {
-						openBracket = false;
-						if (c.escaped || (c.char !== "+" && c.char !== "/")) {
-							res += "[";
-							if (c.isNewLine) {
-								res += "<br />";
-							} else {
-								res += c.char;
-							}
-						} else {
-							block.id = "";
-							block.args = "";
-							if (c.char === "+") {
-								inOpenBlock = true;
-								inCloseBlock = false;
-								inArgs = false;
-							} else {
-								inOpenBlock = false;
-								inCloseBlock = true;
-							}
-						}
-					} else if (!c.escaped && c.char === "[") {
-						openBracket = true;
-						noBlocks = false;
-					} else {
-						res += c.char;
-					}
-				});
-				if (noBlocks) {
-					res = "<p>"+res+"</p>";
+				var appliedClass = false;
+				if (hasClassName) {
+					appliedClass = true;
+					res += _classId+className;
 				}
-				_strings[key] = res;
+				if (args.length > 0) {
+					if (appliedClass) {
+						res += " "+args;
+					} else {
+						appliedClass = true;
+						res += _classId+args;
+					}
+				}
+				if (appliedClass) {
+					res += "'";
+				}
+				return res;
+			};
+			var _applier = typeof argsApplier === "function" ? argsApplier : _standardApplier;
+			this.id = id;
+			this.ele = ele;
+			this.selfClosing = typeof selfClosing !== "undefined" ? selfClosing : false;
+			this.argsApplier = function(args) {
+				return _applier(args,_hasClassName,_className,_standardApplier);
+			};
+		};
+		var _idMap = [
+			new ElementId("s","span"),
+			new ElementId("n","br",true),
+			new ElementId("p","p"),
+			new ElementId("H","h1"),
+			new ElementId("h","h2"),
+			new ElementId("q","span",false,"soft"),
+			new ElementId("i","em"),
+			new ElementId("l","a",false,undefined,function(args,hasClassName,className,standardApplier) {
+				args = args.split(" ");
+				if (args.length === 0) {
+					throw new Error("l element in localization must have one argument specifying the URL to link to.");
+				} else {
+					var res = " href='"+args[0]+"'";
+					args = args.slice(1).join(" ");
+					res += standardApplier(args,hasClassName,className,standardApplier);
+					return res;
+				}
+			}),
+			new ElementId("w","div")
+		];
+		var _strings = {};
+		var _groups = {};
+
+		_defineMethod("hasString",function(key) {
+			return _strings.hasOwnProperty(key);
+		});
+		_defineMethod("getString",function(key) {
+			return _this2.hasString(key) ? _strings[key] : undefined;
+		});
+		_defineMethod("setString",function(key,value) {
+			var res = "";
+			var openBracket = false;
+			var inOpenBlock = false;
+			var inArgs = false;
+			var inCloseBlock = false;
+			var noBlocks = true;
+			var block = {
+				id: "",
+				args: ""
+			};
+			var _pushChar = function(c) {
+				if (inArgs) {
+					block.args += c;
+				} else {
+					block.id += c;
+				}
+			};
+			var _formatArgs = function(id) {
+				return id.argsApplier(block.args);
+			};
+			var _findId = function(context,callback,ignoreSelfClosing) {
+				var id;
+				for (var i = 0; i < _idMap.length; i++) {
+					id = _idMap[i];
+					if (block.id === id.id) {
+						if (ignoreSelfClosing && id.selfClosing) {
+							throw new Error(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.");
+						} else {
+							callback(id);
+							return;
+						}
+					}
+				}
+				throw new Error("Unknown "+context+" tag +"+block.id+" in a localization file.");
+			};
+			value.forEach(function(c) {
+				if (inOpenBlock) {
+					if (c.escaped) {
+						_pushChar(c.char);
+					} else if (!inArgs && c.char === " ") {
+						inArgs = true;
+					} else if (c.char === "]") {
+						inOpenBlock = false;
+						inArgs = false;
+						_findId("opening",function(id) {
+							res += "<"+id.ele+_formatArgs(id);
+							if (id.selfClosing) {
+								res += " /";
+							}
+							res += ">";
+						},false);
+					} else {
+						_pushChar(c.char);
+					}
+				} else if (inCloseBlock) {
+					if (c.escaped) {
+						_pushChar(c.char);
+					} else if (c.char === "]") {
+						inCloseBlock = false;
+						_findId("closing",function(id) {
+							res += "</"+id.ele+">";
+						},true);
+					} else {
+						_pushChar(c.char);
+					}
+				} else if (openBracket) {
+					openBracket = false;
+					if (c.escaped || (c.char !== "+" && c.char !== "/")) {
+						res += "["+c.char;
+					} else {
+						block.id = "";
+						block.args = "";
+						if (c.char === "+") {
+							inOpenBlock = true;
+							inCloseBlock = false;
+							inArgs = false;
+						} else {
+							inOpenBlock = false;
+							inCloseBlock = true;
+						}
+					}
+				} else if (!c.escaped && c.char === "[") {
+					openBracket = true;
+					noBlocks = false;
+				} else {
+					res += c.char;
+				}
 			});
-			_defineMethod("hasGroup",function(key) {
-				return _groups.hasOwnProperty(key);
-			});
-			_defineMethod("getGroup",function(key) {
-				return _this2.hasGroup(key) ? _groups[key] : undefined;
-			});
-			_defineMethod("setGroup",function(key,value) {
-				_groups[key] = value;
-			});
-		})(),
-		writable: false,
-		enumerable: false
-	});
+			if (noBlocks) {
+				res = "<p>"+res+"</p>";
+			}
+			_strings[key] = res;
+		});
+		_defineMethod("hasGroup",function(key) {
+			return _groups.hasOwnProperty(key);
+		});
+		_defineMethod("getGroup",function(key) {
+			return _this2.hasGroup(key) ? _groups[key] : undefined;
+		});
+		_defineMethod("setGroup",function(key,value) {
+			_groups[key] = value;
+		});
+	})();
+
+	var Action = function(key,callback) {
+		this.key = key;
+		this.callback = callback;
+	};
+
+	var _topLevelActions = [
+		new Action("@actionMove",function() {
+			// TODO: Change player location
+		}),
+		new Action("@actionExamine",function() {
+			// TODO: Display object examination text
+		}),
+		new Action("@actionInteract",function() {
+			// TODO: Execute object interaction function
+		})
+	];
 
 	var _container;
 	var _containerContent;
@@ -251,19 +281,43 @@ var Engine = new (function() {
 	};
 	var _parseLocalization = function(map) {
 		map.globalNode.associations.forEach(function(key,value) {
-			if (key === "@questLogTitle") {
-				console.log(key);
-			}
-			_this.LocalizationMap.setString(key,value);
+			LocalizationMap.setString(key,value);
 		});
 		map.globalNode.children.forEach(function(child) {
-			_this.LocalizationMap.setGroup(child.name.rawString,child);
+			LocalizationMap.setGroup(child.name.rawString,child);
 		});
 	};
 
-	_defineMethod("logPush",function(html) {
-		_log.innerHTML += html;
-		_log.scrollTop = _log.scrollHeight
+	var _htmlToNodes = function(html,container) {
+		var root = document.createElement("div");
+		root.innerHTML = html;
+		while (root.childNodes.length > 0) {
+			container.appendChild(root.childNodes[0]);
+		}
+	};
+
+	_defineMethod("logPush",function(id) {
+		_htmlToNodes(LocalizationMap.getString("@break"),_log);
+		_this.logPushNoBreak(id,true);
+	});
+	_defineMethod("logPushNoBreak",function(id,keepLastInView) {
+		var lastElement = _log.children.length > 0 ? _log.children[_log.children.length - 1] : null;
+		_htmlToNodes(LocalizationMap.getString(id),_log);
+		if (lastElement !== null) {
+			keepLastInView = typeof keepLastInView !== "undefined" ? keepLastInView : false;
+			var refElement;
+			if (keepLastInView) {
+				refElement = lastElement;
+			} else {
+				var nextElement = lastElement.nextElementSibling;
+				if (nextElement !== null) {
+					refElement = nextElement;
+				} else {
+					refElement = lastElement;
+				}
+			}
+			_log.scrollTop = refElement.offsetTop;
+		}
 	});
 
 	window.addEventListener("DOMContentLoaded",function() {
@@ -278,11 +332,12 @@ var Engine = new (function() {
 			_inv = document.getElementById("inventory");
 			_actions = document.getElementById("actions");
 			_quests = document.getElementById("quests");
+
 			_log.textContent = "";
-			_this.logPush(_this.LocalizationMap.getString("@init"));
-			_inv.innerHTML = _this.LocalizationMap.getString("@inventoryTitle");
-			_actions.innerHTML = _this.LocalizationMap.getString("@actionsTitle");
-			_quests.innerHTML = _this.LocalizationMap.getString("@questLogTitle");
+			_this.logPushNoBreak("@init");
+			_inv.innerHTML = LocalizationMap.getString("@inventoryTitle");
+			_actions.innerHTML = LocalizationMap.getString("@actionsTitle");
+			_quests.innerHTML = LocalizationMap.getString("@questLogTitle");
 		};
 		var query = location.search;
 		if (query.length !== 0) {

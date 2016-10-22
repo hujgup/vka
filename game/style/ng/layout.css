@@ -218,6 +218,7 @@ html, body {
 	white-space:normal;
 }
 .log-container {
+	position:relative;
 	border:2px inset #e4e4e4;
 	color:#e4e4e4;
 	background-color:#3b3d3c;
