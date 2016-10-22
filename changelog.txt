@@ -17,6 +17,12 @@ Version numbering: x.y.z.w
 		improved.
 	w: Bug revision. Indicates that errors in the previous version were corrected.
 
+## v0.1.1.2
+* Engine string constants are now defined in Engine.Consts, instead of wherever they were being used.
+
+## v0.1.1.1
+* All engine-defined .cfg things are now preceded by "@" to distinguish them from user-defined things.
+
 ## v0.1.1.0
 * Made localization element parsing more general.
 * Logging methods now retain references.

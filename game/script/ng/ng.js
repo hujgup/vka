@@ -16,12 +16,182 @@ var Engine = new (function() {
 		});
 	};
 
+	var ElementId = function(id,ele,selfClosing,className,argsApplier) {
+		var _hasClassName = typeof className !== "undefined";
+		var _className = className;
+		var _classId = " "+_this.Consts.html.CLASS_OPEN;
+		var _standardApplier = function(args,hasClassName,className) {
+			var res = "";
+			var appliedClass = false;
+			if (hasClassName) {
+				appliedClass = true;
+				res += _classId+className;
+			}
+			if (args.length > 0) {
+				if (appliedClass) {
+					res += " "+args;
+				} else {
+					appliedClass = true;
+					res += _classId+args;
+				}
+			}
+			if (appliedClass) {
+				res += _this.Consts.html.ATTR_CLOSE;
+			}
+			return res;
+		};
+		var _applier = typeof argsApplier === "function" ? argsApplier : _standardApplier;
+		this.id = id;
+		this.ele = ele;
+		this.selfClosing = typeof selfClosing !== "undefined" ? selfClosing : false;
+		this.argsApplier = function(args) {
+			return _applier(args,_hasClassName,_className,_standardApplier);
+		};
+	};
+
+	this.Consts = new (function() {
+		var _this2 = this;
+		this.CONFIG_ENGINE_PREFIX = "@";
+		this.LOADING_MSG = "Loading...";
+		this.html = new(function() {
+			var _this3 = this;
+			this.TAG_OPEN = "<";
+			this.TAG_CLOSE = ">";
+			this.CLOSE_TAG_PREFIX = _this3.TAG_OPEN+"/";
+			this.TAG_SELF_CLOSING = " "+_this3.CLOSE_TAG_PREFIX+_this3.TAG_CLOSE;
+			this.TAG_LINK = "link";
+			this.ATTR_OPEN = "='";
+			this.ATTR_CLOSE = "'";
+			this.ATTR_CLASS = "class";
+			this.ATTR_HREF = "href";
+			this.ATTR_REL = "rel";
+			this.CLASS_OPEN = _this3.ATTR_CLASS+_this3.ATTR_OPEN;
+			this.HREF_OPEN = _this3.ATTR_HREF+_this3.ATTR_OPEN;
+			this.INLINE_WRAPPER = "span";
+			this.LINE_BREAK = "br";
+			this.PARAGRAPH = "p";
+			this.MAIN_HEADING = "h1";
+			this.SUBHEADING = "h2";
+			this.EMPHASIS = "em";
+			this.LINK = "a";
+			this.WRAPPER = "div";
+			this.page = new(function() {
+				var _this4 = this;
+				this.LOG = "log";
+				this.IMAGE = "image";
+				this.INV = "inventory";
+				this.ACTIONS = "actions";
+				this.QUESTS = "quests";
+			})();
+		})();
+		this.localization = new(function() {
+			var _this3 = this;
+			this.OPEN_BLOCK = "[";
+			this.CLOSE_BLOCK = "]";
+			this.BLOCK_OPEN_PREFIX = "+";
+			this.BLOCK_CLOSE_PREFIX = "/";
+			this.BLOCK_ARGS_SEPARATOR = " ";
+			this.configKeys = new(function() {
+				var _this4 = this;
+				this.BREAK = _this2.CONFIG_ENGINE_PREFIX+"break";
+				this.INITIAL = _this2.CONFIG_ENGINE_PREFIX+"init";
+				this.TITLE_INV = _this2.CONFIG_ENGINE_PREFIX+"inventoryTitle";
+				this.TITLE_ACTS = _this2.CONFIG_ENGINE_PREFIX+"actionsTitle";
+				this.TITLE_QUESTS = _this2.CONFIG_ENGINE_PREFIX+"questLogTitle";
+			})();
+		})();
+		this.definition = new(function() {
+			var _this3 = this;
+			this.NAME = _this2.CONFIG_ENGINE_PREFIX+"name";
+			this.DESC = _this2.CONFIG_ENGINE_PREFIX+"desc";
+			this.GRAPH_EDGE = _this2.CONFIG_ENGINE_PREFIX+"edge";
+			this.GRAPH_ORIGIN = _this2.CONFIG_ENGINE_PREFIX+"from";
+			this.GRAPH_DESTINATION = _this2.CONFIG_ENGINE_PREFIX+"to";
+			this.GRAPH_EVT_FIRST_TRAVERSAL = _this2.CONFIG_ENGINE_PREFIX+"onFirstTraversal";
+			this.IMAGE_ID = _this2.CONFIG_ENGINE_PREFIX+"id";
+			this.IMAGE_ARTIST = _this2.CONFIG_ENGINE_PREFIX+"artist";
+			this.IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"source";
+			this.OBJECT_REMOVABLE = _this2.CONFIG_ENGINE_PREFIX+"removable";
+			this.OBJECT_EVT_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"onInteract";
+			this.ROOM_IMAGE = _this2.CONFIG_ENGINE_PREFIX+"image";
+			this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
+			this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
+			//X: _this2.CONFIG_ENGINE_PREFIX+"x",
+		})();
+		this.execution = new(function() {
+			var _this3 = this;
+			this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"move";
+			this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"examine";
+			this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"interact";
+			this.ACTION_LOG = _this2.CONFIG_ENGINE_PREFIX+"log";
+			this.FLOW_IF = _this2.CONFIG_ENGINE_PREFIX+"if";
+			this.FLOW_CONDITION = _this2.CONFIG_ENGINE_PREFIX+"limit";
+			this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
+			this.FLOW_ELSE = _this2.CONFIG_ENGINE_PREFIX+"else";
+			this.FLOW_ELSE_IF = _this2.CONFIG_ENGINE_PREFIX+"elseIf";
+		})();
+		this.io = new(function() {
+			var _this3 = this;
+			this.USER_ID = "app";
+			this.ENGINE_ID = "ng";
+			this.CONFIG_EXT = ".cfg";
+			this.paths = new(function() {
+				var _this4 = this;
+				this.SCRIPT_ROOT = "script/";
+				this.SCRIPT_USER = _this4.SCRIPT_ROOT+_this3.USER_ID+"/";
+				this.SCRIPT_ENGINE = _this4.SCRIPT_ROOT+_this3.ENGINE_ID+"/";
+				this.SCRIPT_IO = _this4.SCRIPT_ENGINE+"io/";
+				this.COMMON_ROOT = "common/";
+				this.COMMON_USER = _this4.COMMON_ROOT+_this3.USER_ID+"/";
+				this.COMMON_ENGINE = _this4.COMMON_ROOT+_this3.ENGINE_ID+"/";
+				this.STYLE_ROOT = "style/";
+				this.STYLE_USER = _this4.STYLE_ROOT+_this3.USER_ID+"/";
+			})();
+			this.files = new(function() {
+				var _this4 = this;
+				this.SCRIPT_LOAD_STYLING = _this3.paths.SCRIPT_IO+"loadStyling.php";
+				this.SCRIPT_LOAD_LOCALIZATION = _this3.paths.SCRIPT_IO+"loadLocalization.php";
+				this.SCRIPT_LOAD_MISC = _this3.paths.SCRIPT_IO+"loadNg.php";
+				this.COMMON_OBJECTS = _this3.paths.COMMON_ENGINE+"objects"+_this3.CONFIG_EXT;
+				this.COMMON_ROOMS = _this3.paths.COMMON_ENGINE+"rooms"+_this3.CONFIG_EXT;
+				this.COMMON_GRAPH = _this3.paths.COMMON_ENGINE+"graph"+_this3.CONFIG_EXT;
+				this.COMMON_IMAGES = _this3.paths.COMMON_ENGINE+"images"+_this3.CONFIG_EXT;
+				this.COMMON_OBJECTS = _this3.paths.COMMON_ENGINE+"objects"+_this3.CONFIG_EXT;
+				this.COMMON_ROOMS = _this3.paths.COMMON_ENGINE+"rooms"+_this3.CONFIG_EXT;
+				this.COMMON_STATE = _this3.paths.COMMON_ENGINE+"state"+_this3.CONFIG_EXT;
+			})();
+		})();
+	});
+	this.Consts.localization.ID_MAP = [
+		new ElementId("s",_this.Consts.html.INLINE_WRAPPER),
+		new ElementId("n",_this.Consts.html.LINE_BREAK,true),
+		new ElementId("p",_this.Consts.html.PARAGRAPH),
+		new ElementId("H",_this.Consts.html.MAIN_HEADING),
+		new ElementId("h",_this.Consts.html.SUBHEADING),
+		new ElementId("q",_this.Consts.html.INLINE_WRAPPER,false,"soft"),
+		new ElementId("i",_this.Consts.html.EMPHASIS),
+		new ElementId("l",_this.Consts.html.LINK,false,undefined,function(args,hasClassName,className,standardApplier) {
+			args = args.split(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
+			if (args.length === 0) {
+				throw new Error("l element in localization must have one argument specifying the URL to link to.");
+			} else {
+				var res = " "+_this.Consts.html.HREF_OPEN+args[0]+_this.Consts.html.ATTR_CLOSE;
+				args = args.slice(1).join(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
+				res += standardApplier(args,hasClassName,className,standardApplier);
+				return res;
+			}
+		}),
+		new ElementId("w",_this.Consts.html.WRAPPER)
+	];
+	this.Consts = Object.freeze(this.Consts);
+
+
 	var LoadCounter = function(max,container) {
 		var _loaded = 0;
 		var _max = max;
 		var _errors = [];
 		var _render = function() {
-			container.textContent = "Loading... "+Math.round(100*_loaded/_max)+"%";
+			container.textContent = _this.Consts.LOADING_MSG+" "+Math.round(100*_loaded/_max)+"%";
 		};
 		this.increment = function() {
 			if (_loaded < _max && _errors.length === 0) {
@@ -41,8 +211,8 @@ var Engine = new (function() {
 			var span;
 			var text;
 			for (var i = 0; i < _errors.length; i++) {
-				p = document.createElement("p");
-					span = document.createElement("span");
+				p = document.createElement(_this.Consts.html.PARAGRAPH);
+					span = document.createElement(_this.Consts.html.INLINE_WRAPPER);
 						span.className = "error";
 						span.textContent = "ERROR:";
 					p.appendChild(span);
@@ -67,59 +237,6 @@ var Engine = new (function() {
 			});
 		};
 
-		var ElementId = function(id,ele,selfClosing,className,argsApplier) {
-			var _hasClassName = typeof className !== "undefined";
-			var _className = className;
-			var _classId = " class='";
-			var _standardApplier = function(args,hasClassName,className) {
-				var res = "";
-				var appliedClass = false;
-				if (hasClassName) {
-					appliedClass = true;
-					res += _classId+className;
-				}
-				if (args.length > 0) {
-					if (appliedClass) {
-						res += " "+args;
-					} else {
-						appliedClass = true;
-						res += _classId+args;
-					}
-				}
-				if (appliedClass) {
-					res += "'";
-				}
-				return res;
-			};
-			var _applier = typeof argsApplier === "function" ? argsApplier : _standardApplier;
-			this.id = id;
-			this.ele = ele;
-			this.selfClosing = typeof selfClosing !== "undefined" ? selfClosing : false;
-			this.argsApplier = function(args) {
-				return _applier(args,_hasClassName,_className,_standardApplier);
-			};
-		};
-		var _idMap = [
-			new ElementId("s","span"),
-			new ElementId("n","br",true),
-			new ElementId("p","p"),
-			new ElementId("H","h1"),
-			new ElementId("h","h2"),
-			new ElementId("q","span",false,"soft"),
-			new ElementId("i","em"),
-			new ElementId("l","a",false,undefined,function(args,hasClassName,className,standardApplier) {
-				args = args.split(" ");
-				if (args.length === 0) {
-					throw new Error("l element in localization must have one argument specifying the URL to link to.");
-				} else {
-					var res = " href='"+args[0]+"'";
-					args = args.slice(1).join(" ");
-					res += standardApplier(args,hasClassName,className,standardApplier);
-					return res;
-				}
-			}),
-			new ElementId("w","div")
-		];
 		var _strings = {};
 		var _groups = {};
 
@@ -152,8 +269,8 @@ var Engine = new (function() {
 			};
 			var _findId = function(context,callback,ignoreSelfClosing) {
 				var id;
-				for (var i = 0; i < _idMap.length; i++) {
-					id = _idMap[i];
+				for (var i = 0; i < _this.Consts.localization.ID_MAP.length; i++) {
+					id = _this.Consts.localization.ID_MAP[i];
 					if (block.id === id.id) {
 						if (ignoreSelfClosing && id.selfClosing) {
 							throw new Error(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.");
@@ -163,23 +280,25 @@ var Engine = new (function() {
 						}
 					}
 				}
-				throw new Error("Unknown "+context+" tag +"+block.id+" in a localization file.");
+				throw new Error("Unknown "+context+" tag "+_this.Consts.localization.BLOCK_OPEN_PREFIX+block.id+" in a localization file.");
 			};
 			value.forEach(function(c) {
 				if (inOpenBlock) {
+					console.log(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
 					if (c.escaped) {
 						_pushChar(c.char);
-					} else if (!inArgs && c.char === " ") {
+					} else if (!inArgs && c.char === _this.Consts.localization.BLOCK_ARGS_SEPARATOR) {
 						inArgs = true;
-					} else if (c.char === "]") {
+					} else if (c.char === _this.Consts.localization.CLOSE_BLOCK) {
 						inOpenBlock = false;
 						inArgs = false;
 						_findId("opening",function(id) {
-							res += "<"+id.ele+_formatArgs(id);
+							res += _this.Consts.html.TAG_OPEN+id.ele+_formatArgs(id);
 							if (id.selfClosing) {
-								res += " /";
+								res += _this.Consts.html.TAG_SELF_CLOSING;
+							} else {
+								res += _this.Consts.html.TAG_CLOSE;
 							}
-							res += ">";
 						},false);
 					} else {
 						_pushChar(c.char);
@@ -187,22 +306,22 @@ var Engine = new (function() {
 				} else if (inCloseBlock) {
 					if (c.escaped) {
 						_pushChar(c.char);
-					} else if (c.char === "]") {
+					} else if (c.char === _this.Consts.localization.CLOSE_BLOCK) {
 						inCloseBlock = false;
 						_findId("closing",function(id) {
-							res += "</"+id.ele+">";
+							res += _this.Consts.html.CLOSE_TAG_PREFIX+id.ele+_this.Consts.html.TAG_CLOSE;
 						},true);
 					} else {
 						_pushChar(c.char);
 					}
 				} else if (openBracket) {
 					openBracket = false;
-					if (c.escaped || (c.char !== "+" && c.char !== "/")) {
-						res += "["+c.char;
+					if (c.escaped || (c.char !== _this.Consts.localization.BLOCK_OPEN_PREFIX && c.char !== _this.Consts.localization.BLOCK_CLOSE_PREFIX)) {
+						res += _this.Consts.localization.OPEN_BLOCK+c.char;
 					} else {
 						block.id = "";
 						block.args = "";
-						if (c.char === "+") {
+						if (c.char === _this.Consts.localization.BLOCK_OPEN_PREFIX) {
 							inOpenBlock = true;
 							inCloseBlock = false;
 							inArgs = false;
@@ -211,7 +330,7 @@ var Engine = new (function() {
 							inCloseBlock = true;
 						}
 					}
-				} else if (!c.escaped && c.char === "[") {
+				} else if (!c.escaped && c.char === _this.Consts.localization.OPEN_BLOCK) {
 					openBracket = true;
 					noBlocks = false;
 				} else {
@@ -219,7 +338,7 @@ var Engine = new (function() {
 				}
 			});
 			if (noBlocks) {
-				res = "<p>"+res+"</p>";
+				res = _this.Consts.html.TAG_OPEN+_this.Consts.html.PARAGRAPH+_this.Consts.html.TAG_CLOSE+res+_this.Consts.html.CLOSE_TAG_PREFIX+_this.Consts.html.PARAGRAPH+_this.Consts.html.TAG_CLOSE;
 			}
 			_strings[key] = res;
 		});
@@ -240,13 +359,13 @@ var Engine = new (function() {
 	};
 
 	var _topLevelActions = [
-		new Action("@actionMove",function() {
+		new Action(_this.Consts.execution.ACTION_MOVE,function() {
 			// TODO: Change player location
 		}),
-		new Action("@actionExamine",function() {
+		new Action(_this.Consts.execution.ACTION_EXAMINE,function() {
 			// TODO: Display object examination text
 		}),
-		new Action("@actionInteract",function() {
+		new Action(_this.Consts.execution.ACTION_INTERACT,function() {
 			// TODO: Execute object interaction function
 		})
 	];
@@ -274,9 +393,9 @@ var Engine = new (function() {
 		});
 	};
 	var _loadStylesheet = function(file) {
-		var link = document.createElement("link");
-			link.setAttribute("rel","stylesheet");
-			link.setAttribute("href","style/app/"+file);
+		var link = document.createElement(_this.Consts.html.TAG_LINK);
+			link.setAttribute(_this.Consts.html.ATTR_REL,"stylesheet");
+			link.setAttribute(_this.Consts.html.ATTR_HREF,_this.Consts.io.paths.STYLE_USER+file);
 		document.head.appendChild(link);
 	};
 	var _parseLocalization = function(map) {
@@ -297,7 +416,7 @@ var Engine = new (function() {
 	};
 
 	_defineMethod("logPush",function(id) {
-		_htmlToNodes(LocalizationMap.getString("@break"),_log);
+		_htmlToNodes(LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_log);
 		_this.logPushNoBreak(id,true);
 	});
 	_defineMethod("logPushNoBreak",function(id,keepLastInView) {
@@ -327,17 +446,17 @@ var Engine = new (function() {
 		var manager = new LoadCounter(4,_container);
 		manager.onLoad = function() {
 			_container.innerHTML = _containerContent;
-			_log = document.getElementById("log");
-			_image = document.getElementById("image");
-			_inv = document.getElementById("inventory");
-			_actions = document.getElementById("actions");
-			_quests = document.getElementById("quests");
+			_log = document.getElementById(_this.Consts.html.page.LOG);
+			_image = document.getElementById(_this.Consts.html.page.IMAGE);
+			_inv = document.getElementById(_this.Consts.html.page.INV);
+			_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
+			_quests = document.getElementById(_this.Consts.html.page.QUESTS);
 
 			_log.textContent = "";
-			_this.logPushNoBreak("@init");
-			_inv.innerHTML = LocalizationMap.getString("@inventoryTitle");
-			_actions.innerHTML = LocalizationMap.getString("@actionsTitle");
-			_quests.innerHTML = LocalizationMap.getString("@questLogTitle");
+			_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
+			_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
+			_actions.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
+			_quests.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
 		};
 		var query = location.search;
 		if (query.length !== 0) {
@@ -351,14 +470,14 @@ var Engine = new (function() {
 			query = {};
 		}
 
-		var req = new AJAXRequest(HTTPMethods.POST,"script/ng/io/loadStyling.php");
+		var req = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_STYLING);
 		_wrapCallback(req,manager,function(res) {
 			var json = JSON.parse(res.text);
 			for (var i = 0; i < json.length; i++) {
 				_loadStylesheet(json[i]);
 			}
 		});
-		var req2 = new AJAXRequest(HTTPMethods.POST,"script/ng/io/loadLocalization.php");
+		var req2 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_LOCALIZATION);
 		req2.data = {
 			lang: query.hasOwnProperty("lang") ? query.lang : "en"
 		};
@@ -366,9 +485,10 @@ var Engine = new (function() {
 			_parseLocalization(new COM.Map(res.text));
 			
 		});
-		var req3 = new AJAXRequest(HTTPMethods.POST,"script/ng/io/loadNg.php");
+		// TODO: For every file in common/ng except state.cfg, make them their own folders so users can split them for readability (e.g. by world in VKA)
+		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req3.data = {
-			file: "common/ng/objects.cfg"
+			file: _this.Consts.io.COMMON_OBJECTS
 		};
 		req3.execute(function(res) {
 			if (res.error) {
@@ -377,9 +497,9 @@ var Engine = new (function() {
 				manager.increment();
 			}
 		});
-		var req4 = new AJAXRequest(HTTPMethods.POST,"script/ng/io/loadNg.php");
+		var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req4.data = {
-			file: "common/ng/rooms.cfg"
+			file: _this.Consts.io.COMMON_ROOMS
 		};
 		req4.execute(function(res) {
 			if (res.error) {
