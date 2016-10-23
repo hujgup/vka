@@ -30,4 +30,20 @@ scoping:
 	@addFlag = y
 	@hasFlag = y ## true because y is in this scope
 
-
+Math operations:
+Expandable:
+@ADD {
+	@vars {
+		cards
+	}
+	@literals {
+		2
+	}
+	@out = cards
+}
+Non-expandable:
+@LN {
+	@var = cards
+	## @literal = 4
+	@out = cards
+}

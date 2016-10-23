@@ -2,20 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
-Version numbering: x.y.z.w
-	(If x >= 1)
-	x: Full revision. Indicates a large re-write.
-	y: Major revision. Indicates that production has begun on a world.
-	z: Minor revision. Indicates that an existing world was extended or improved.
-	w: Bug revision. Indicates that errors in the previous version were corrected.
-Version numbering: x.y.z.w
-	(If x == 0)
-	x: 0
-	y: Major revision. Indicates that production has begun on a world, or a significant
-		engine feature is beginning to be implemented.
-	z: Minor revision. Indicated that an existing world or engine component was extended or
-		improved.
-	w: Bug revision. Indicates that errors in the previous version were corrected.
+## v0.1.2.1
+* Added more const strings for mathematical operations.
+* common/ng/x loading script created.
 
 ## v0.1.2.0
 * Scoping set up.

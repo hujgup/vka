@@ -65,8 +65,11 @@ var Engine = new (function() {
 			this.ATTR_CLASS = "class";
 			this.ATTR_HREF = "href";
 			this.ATTR_REL = "rel";
+			this.ATTR_TARGET = "target";
 			this.CLASS_OPEN = _this3.ATTR_CLASS+_this3.ATTR_OPEN;
 			this.HREF_OPEN = _this3.ATTR_HREF+_this3.ATTR_OPEN;
+			this.TARGET_OPEN = _this3.ATTR_TARGET+_this3.ATTR_OPEN;
+			this.TARGET_FULL = _this3.TARGET_OPEN+"_blank"+_this3.ATTR_CLOSE;
 			this.INLINE_WRAPPER = "span";
 			this.LINE_BREAK = "br";
 			this.PARAGRAPH = "p";
@@ -116,14 +119,19 @@ var Engine = new (function() {
 			this.ROOM_IMAGE = _this2.CONFIG_ENGINE_PREFIX+"image";
 			this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
 			this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
-			//this.x = _this2.CONFIG_ENGINE_PREFIX+"x";
+			this.MATH_OP_ONE_VAR = _this2.CONFIG_ENGINE_PREFIX+"var";
+			this.MATH_OP_ONE_LITERAL = _this2.CONFIG_ENGINE_PREFIX+"literal";
+			this.MATH_OP_MANY_VARS = _this3.MATH_OP_ONE_VAR+"s";
+			this.MATH_OP_MANY_LITERALS = _this3.MATH_OP_ONE_LITERAL+"s";
+			this.MATH_OP_OUTPUT = _this2.CONFIG_ENGINE_PREFIX+"out";
 		})();
 		this.execution = new(function() {
 			var _this3 = this;
-			this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"move";
+			this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"teleport";
 			this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"examine";
 			this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"interact";
 			this.ACTION_LOG = _this2.CONFIG_ENGINE_PREFIX+"log";
+			this.ACTION_LOG_NO_BREAK = _this2.CONFIG_ENGINE_PREFIX+"logNoBreak";
 			this.FLOW_IF = _this2.CONFIG_ENGINE_PREFIX+"if";
 			this.FLOW_CONDITION = _this2.CONFIG_ENGINE_PREFIX+"limit";
 			this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
@@ -142,6 +150,30 @@ var Engine = new (function() {
 			this.LOGIC_XOR = _this2.CONFIG_ENGINE_PREFIX+"XOR";
 			this.LOGIC_XNOR = _this2.CONFIG_ENGINE_PREFIX+"XNOR";
 			this.LOGIC_MUTEX = _this2.CONFIG_ENGINE_PREFIX+"MUTEX";
+			// Expandable
+			this.MATH_ADD = _this2.CONFIG_ENGINE_PREFIX+"ADD";
+			this.MATH_SUBTRACT = _this2.CONFIG_ENGINE_PREFIX+"SUB";
+			this.MATH_MULTIPLY = _this2.CONFIG_ENGINE_PREFIX+"MULT";
+			this.MATH_DIVIDE = _this2.CONFIG_ENGINE_PREFIX+"DIV";
+			this.MATH_MOD = _this2.CONFIG_ENGINE_PREFIX+"MOD";
+			this.MATH_EXP = _this2.CONFIG_ENGINE_PREFIX+"EXP";
+			this.MATH_INCREMENT = _this2.CONFIG_ENGINE_PREFIX+"INC";
+			this.MATH_DECREMENT = _this2.CONFIG_ENGINE_PREFIX+"DEC";
+			// Non-Expandable
+			this.MATH_LN = _this2.CONFIG_ENGINE_PREFIX+"LN";
+			this.MATH_LOG2 = _this2.CONFIG_ENGINE_PREFIX+"LOG2";
+			this.MATH_LOG10 = _this2.CONFIG_ENGINE_PREFIX+"LOG10";
+			this.MATH_ROUND = _this2.CONFIG_ENGINE_PREFIX+"ROUND";
+			this.MATH_FLOOR = _this2.CONFIG_ENGINE_PREFIX+"FLOOR";
+			this.MATH_CEILING = _this2.CONFIG_ENGINE_PREFIX+"CEIL";
+			this.MATH_TRUNCATE = _this2.CONFIG_ENGINE_PREFIX+"TRUNC";
+			this.CMP_EQ = _this2.CONFIG_ENGINE_PREFIX+"EQ";
+			this.CMP_NEQ = _this2.CONFIG_ENGINE_PREFIX+"NEQ";
+			this.CMP_LT = _this2.CONFIG_ENGINE_PREFIX+"LT";
+			this.CMP_GT = _this2.CONFIG_ENGINE_PREFIX+"GT";
+			this.CMP_LTEQ = _this2.CONFIG_ENGINE_PREFIX+"LTEQ";
+			this.CMP_GTEQ = _this2.CONFIG_ENGINE_PREFIX+"GTEQ";
+			// End expandability clauses
 		})();
 		this.io = new(function() {
 			var _this3 = this;
@@ -157,21 +189,24 @@ var Engine = new (function() {
 				this.COMMON_ROOT = "common/";
 				this.COMMON_USER = _this4.COMMON_ROOT+_this3.USER_ID+"/";
 				this.COMMON_ENGINE = _this4.COMMON_ROOT+_this3.ENGINE_ID+"/";
+				this.COMMON_OBJECTS = _this4.COMMON_ENGINE+"objects";
+				this.COMMON_ROOMS = _this4.COMMON_ENGINE+"rooms";
+				this.COMMON_GRAPH = _this4.COMMON_ENGINE+"graph";
+				this.COMMON_IMAGES = _this4.COMMON_ENGINE+"images";
+				this.COMMON_ROOMS = _this4.COMMON_ENGINE+"objects";
 				this.STYLE_ROOT = "style/";
 				this.STYLE_USER = _this4.STYLE_ROOT+_this3.USER_ID+"/";
+				this.GFX_ROOT = "gfx/";
+				this.GFX_USER = _this4.GFX_ROOT+_this3.USER_ID+"/";
+				this.GFX_ENGINE = _this4.GFX_ROOT+_this3.ENGINE_ID+"/";
 			})();
 			this.files = new(function() {
 				var _this4 = this;
 				this.SCRIPT_LOAD_STYLING = _this3.paths.SCRIPT_IO+"loadStyling.php";
 				this.SCRIPT_LOAD_LOCALIZATION = _this3.paths.SCRIPT_IO+"loadLocalization.php";
 				this.SCRIPT_LOAD_MISC = _this3.paths.SCRIPT_IO+"loadNg.php";
-				this.COMMON_OBJECTS = _this3.paths.COMMON_ENGINE+"objects"+_this3.CONFIG_EXT;
-				this.COMMON_ROOMS = _this3.paths.COMMON_ENGINE+"rooms"+_this3.CONFIG_EXT;
-				this.COMMON_GRAPH = _this3.paths.COMMON_ENGINE+"graph"+_this3.CONFIG_EXT;
-				this.COMMON_IMAGES = _this3.paths.COMMON_ENGINE+"images"+_this3.CONFIG_EXT;
-				this.COMMON_OBJECTS = _this3.paths.COMMON_ENGINE+"objects"+_this3.CONFIG_EXT;
-				this.COMMON_ROOMS = _this3.paths.COMMON_ENGINE+"rooms"+_this3.CONFIG_EXT;
 				this.COMMON_STATE = _this3.paths.COMMON_ENGINE+"state"+_this3.CONFIG_EXT;
+				this.GFX_ALPHA = _this3.paths.GFX_ENGINE+"alpha.png";
 			})();
 		})();
 	});
@@ -188,7 +223,7 @@ var Engine = new (function() {
 			if (args.length === 0) {
 				throw new Error("l element in localization must have one argument specifying the URL to link to.");
 			} else {
-				var res = " "+_this.Consts.html.HREF_OPEN+args[0]+_this.Consts.html.ATTR_CLOSE;
+				var res = " "+_this.Consts.html.TARGET_FULL+" "+_this.Consts.html.HREF_OPEN+args[0]+_this.Consts.html.ATTR_CLOSE;
 				args = args.slice(1).join(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
 				res += standardApplier(args,hasClassName,className,standardApplier);
 				return res;
@@ -228,7 +263,7 @@ var Engine = new (function() {
 		Object.defineProperty(this,"hasParent",{
 			get: function() {
 				return _parent !== null;
-			}
+			},
 			enumerable: true
 		});
 		Object.defineProperty(this,"children",{
@@ -468,7 +503,6 @@ var Engine = new (function() {
 			};
 			value.forEach(function(c) {
 				if (inOpenBlock) {
-					console.log(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
 					if (c.escaped) {
 						_pushChar(c.char);
 					} else if (!inArgs && c.char === _this.Consts.localization.BLOCK_ARGS_SEPARATOR) {
@@ -669,29 +703,39 @@ var Engine = new (function() {
 			_parseLocalization(new COM.Map(res.text));
 			
 		});
-		// TODO: For every file in common/ng except state.cfg, make them their own folders so users can split them for readability (e.g. by world in VKA)
-		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
-		req3.data = {
-			file: _this.Consts.io.COMMON_OBJECTS
-		};
+		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 		req3.execute(function(res) {
+			console.log(res.text);
 			if (res.error) {
-				manager.error(res.text,res);
+				manager.error(new Error(res.text),res);
 			} else {
 				manager.increment();
 			}
 		});
 		var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req4.data = {
-			file: _this.Consts.io.COMMON_ROOMS
+			folder: _this.Consts.io.paths.COMMON_OBJECTS
 		};
 		req4.execute(function(res) {
 			if (res.error) {
-				manager.error(res.text,res);
+				manager.error(new Error(res.text),res);
 			} else {
 				manager.increment();
 			}
 		});
+		var req5 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
+		req5.data = {
+			folder: _this.Consts.io.paths.COMMON_ROOMS
+		};
+		req5.execute(function(res) {
+			if (res.error) {
+				manager.error(new Error(res.text),res);
+			} else {
+				manager.increment();
+			}
+		});
+		// TODO: more requests for other common/ng folders
+		// TODO: get common/ng/state.cfg and build Scope objects from that
 	});
 })();
 
