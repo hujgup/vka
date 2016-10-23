@@ -9,3 +9,25 @@ On move action happens
 
 common/ng files: Make them all directories (except state.cfg) so that users can split files if they get too long or w/e
 
+state control:
+booleans:
+	@hasFlag = f ## true if f exists in current scope
+	@addFlag = f ## adds f to current scope if it doesnt already exist in this or a parent scope
+	@removeFlag = f ## removes f from current scope or parent scope
+variables:
+	@get:world = normal # true if world is normal
+	@set:world = normal # sets world to normal, if world is defined in a parent scope
+	## all variable definitions must be in state.cfg
+scoping:
+	world {
+		@addFlag = f
+	}
+	@hasFlag = f ## false, because f is in a child scope
+	@addFlag = x
+	world {
+		@hasFlag = x ## true, because x is in a parent scope
+	}
+	@addFlag = y
+	@hasFlag = y ## true because y is in this scope
+
+

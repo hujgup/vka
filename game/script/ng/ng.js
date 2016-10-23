@@ -116,7 +116,7 @@ var Engine = new (function() {
 			this.ROOM_IMAGE = _this2.CONFIG_ENGINE_PREFIX+"image";
 			this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
 			this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
-			//X: _this2.CONFIG_ENGINE_PREFIX+"x",
+			//this.x = _this2.CONFIG_ENGINE_PREFIX+"x";
 		})();
 		this.execution = new(function() {
 			var _this3 = this;
@@ -129,6 +129,19 @@ var Engine = new (function() {
 			this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
 			this.FLOW_ELSE = _this2.CONFIG_ENGINE_PREFIX+"else";
 			this.FLOW_ELSE_IF = _this2.CONFIG_ENGINE_PREFIX+"elseIf";
+			this.STATE_HAS_FLAG = _this2.CONFIG_ENGINE_PREFIX+"hasFlag";
+			this.STATE_ADD_FLAG = _this2.CONFIG_ENGINE_PREFIX+"addFlag";
+			this.STATE_REMOVE_FLAG = _this2.CONFIG_ENGINE_PREFIX+"removeFllag";
+			this.STATE_GET_VAR_PREFIX = _this2.CONFIG_ENGINE_PREFIX+"get:";
+			this.STATE_SET_VAR_PREFIX = _this2.CONFIG_ENGINE_PREFIX+"set:";
+			this.LOGIC_AND = _this2.CONFIG_ENGINE_PREFIX+"AND";
+			this.LOGIC_OR = _this2.CONFIG_ENGINE_PREFIX+"OR";
+			this.LOGIC_NAND = _this2.CONFIG_ENGINE_PREFIX+"NAND";
+			this.LOGIC_NOR = _this2.CONFIG_ENGINE_PREFIX+"NOR";
+			this.LOGIC_NOR_ALIAS = _this2.CONFIG_ENGINE_PREFIX+"NOT";
+			this.LOGIC_XOR = _this2.CONFIG_ENGINE_PREFIX+"XOR";
+			this.LOGIC_XNOR = _this2.CONFIG_ENGINE_PREFIX+"XNOR";
+			this.LOGIC_MUTEX = _this2.CONFIG_ENGINE_PREFIX+"MUTEX";
 		})();
 		this.io = new(function() {
 			var _this3 = this;
@@ -185,6 +198,177 @@ var Engine = new (function() {
 	];
 	this.Consts = Object.freeze(this.Consts);
 
+	// TODO: Use this object for defining scoping when reading state.cfg
+	var Scope = function(name) {
+		var _this2 = this;
+		var _flags = [];
+		var _vars = {};
+		var _children = [];
+		var _parent = null;
+
+		var _defineMethod = function(name,func) {
+			Object.defineProperty(_this2,name,{
+				value: func,
+				writable: false,
+				enumerable: false
+			});
+		};
+
+		Object.defineProperty(this,"name",{
+			value: name,
+			enumerable: true,
+			writable: false
+		});
+		Object.defineProperty(this,"parent",{
+			get: function() {
+				return _parent;
+			},
+			enumerable: true
+		});
+		Object.defineProperty(this,"hasParent",{
+			get: function() {
+				return _parent !== null;
+			}
+			enumerable: true
+		});
+		Object.defineProperty(this,"children",{
+			value: new ImmutableArray(_children),
+			writable: false,
+			enumerable: true
+		});
+		Object.defineProperty(this,"hasChildren",{
+			get: function() {
+				return _children.length !== 0;
+			},
+			enumerable: true
+		});
+
+		_defineMethod("_setParent",function(value) {
+			_parent = value;
+		});
+		_defineMethod("_getVarScope",function(v) {
+			var res;
+			if (_vars.hasOwnProperty(v)) {
+				res = _this2;
+			} else if (_this2.hasParent) {
+				res = _parent._getVarScope(v);
+			} else {
+				res = null;
+			}
+			return res;
+		});
+		_defineMethod("_hasVar",function(v) {
+			return _vars.hasOwnProperty(v);
+		});
+		_defineMethod("_getVar",function(v) {
+			return _vars[v];
+		});
+		_defineMethod("_setVar",function(v,value) {
+			_vars[v] = value;
+		});
+		_defineMethod("hasFlag",function(flag) {
+			var res;
+			if (_flags.indexOf(flag) !== -1) {
+				res = true;
+			} else if (_this2.hasParent) {
+				res = _parent.hasFlag(flag);
+			} else {
+				res = false;
+			}
+			return res;
+		});
+		_defineMethod("addFlag",function(flag) {
+			var res = !_this2.hasFlag(flag);
+			if (res) {
+				_flags.push(flag);
+			}
+			return res;
+		});
+		_defineMethod("removeFlag",function(flag) {
+			var res;
+			var index = _flags.indexOf(flag);
+			if (index !== -1) {
+				_flags.splice(index,1);
+				res = true;
+			} else if (_this2.hasParent) {
+				res = _parent.removeFlag(flag);
+			} else {
+				res = false;
+			}
+			return res;
+		});
+		_defineMethod("getVariable",function(v,value) {
+			var scope = _this2._getVarScope(v);
+			return scope !== null ? scope._getVar(v) === value : false;
+		});
+		_defineMethod("setVariable",function(v,value) {
+			var scope = _this2._getVarScope(v);
+			if (scope !== null) {
+				scope._setVar(v,value);
+			} else {
+				_this2._setVar(v,value);
+			}
+		});
+		_defineMethod("hasChild",function(child,deep) {
+			deep = typeof deep !== "undefined" ? deep : false;
+			var res;
+			if (_children.indexOf(child) !== -1) {
+				res = true;
+			} else if (deep && _this2.hasChildren) {
+				res = false;
+				for (var i = 0; i < _children.length; i++) {
+					res = _children[i].hasChild(child,deep);
+					if (res) {
+						break;
+					}
+				}
+			} else {
+				res = false;
+			}
+			return res;
+		});
+		_defineMethod("hasChildNamed",function(name,deep) {
+			return typeof _this2.getChildNamed(name,deep) !== "undefined";
+		});
+		_defineMethod("getChildNamed",function(name,deep) {
+			deep = typeof deep !== "undefined" ? deep : false;
+			var res;
+			var child;
+			for (var i = 0; i < _children.length; i++) {
+				child = _children[i];
+				if (child.name === name) {
+					res = child;
+					break;
+				} else if (deep && child.hasChildren) {
+					res = child.getChildNamed(name,deep);
+					if (typeof res !== "undefined") {
+						break;
+					}
+				}
+			}
+			return res;
+		});
+		_defineMethod("addChild",function(child) {
+			child._setParent(_this2);
+			_children.push(child);
+		});
+		_defineMethod("removeChild",function(child) {
+			var index = _children.indexOf(child);
+			var res = index !== -1;
+			if (res) {
+				_children.splice(index,1);
+			}
+			return res;
+		});
+		_defineMethod("removeChildNamed",function(name) {
+			var child = _this2.getChildNamed(name);
+			var res = typeof child !== "undefined";
+			if (res) {
+				res = _this2.removeChild(child);
+			}
+			return res;
+		});
+	};
 
 	var LoadCounter = function(max,container) {
 		var _loaded = 0;

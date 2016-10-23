@@ -17,6 +17,11 @@ Version numbering: x.y.z.w
 		improved.
 	w: Bug revision. Indicates that errors in the previous version were corrected.
 
+## v0.1.2.0
+* Scoping set up.
+* Added more const strings for locical operations.
+* Restructured game/common/ng so that users can define multiple files of each type.
+
 ## v0.1.1.2
 * Engine string constants are now defined in Engine.Consts, instead of wherever they were being used.
 
