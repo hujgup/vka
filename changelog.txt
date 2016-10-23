@@ -2,8 +2,11 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.1.2.2
+* Changed how variable getting/setting is defined because I briefly forgot how my file format works.
+
 ## v0.1.2.1
-* Added more const strings for mathematical operations.
+* Added more const strings for mathematical operations and variable getting/setting.
 * common/ng/x loading script created.
 
 ## v0.1.2.0
