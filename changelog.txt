@@ -2,6 +2,12 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.0.0
+* Full common/ng parsing.
+* Started defining execution statements.
+* Fixed bug where script/ng/io/loadNg.php was not working because JS was passing in the full path and PHP expected a partial path.
+* Refinement of cfg execution statement syntax.
+
 ## v0.1.2.2
 * Changed how variable getting/setting is defined because I briefly forgot how my file format works.
 

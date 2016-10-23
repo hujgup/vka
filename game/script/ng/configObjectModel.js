@@ -120,8 +120,11 @@ function strnatcasecmp (str1, str2) {
 	}
 }
 
-function ImmutableArray(mutableArr) {
+function ImmutableArray(mutableArr,transform) {
 	var _arr = mutableArr;
+	var _transform = typeof transform === "function" ? transform : function(value) {
+		return value;
+	};
 	var _this = this;
 
 	Object.defineProperty(this,"length",{
@@ -131,7 +134,7 @@ function ImmutableArray(mutableArr) {
 	});
 
 	this.at = function(i) {
-		return _arr[i];
+		return _transform(_arr[i]);
 	};
 	this.clone = function() {
 		return _arr.slice(0);
@@ -146,14 +149,14 @@ function ImmutableArray(mutableArr) {
 	this.every = function(callback) {
 		var res = true;
 		for (var i = 0; res && i < _arr.length; i++) {
-			res = callback(_arr[i],i,this);
+			res = callback(_transform(_arr[i]),i,this);
 		}
 		return res;
 	};
 	this.filter = function(callback) {
 		var res = [];
 		for (var i = 0; i < _arr.length; i++) {
-			if (callback(_arr[i],i,this)) {
+			if (callback(_transform(_arr[i]),i,this)) {
 				res.push(_arr[i]);
 			}
 		}
@@ -166,7 +169,7 @@ function ImmutableArray(mutableArr) {
 	this.findIndex = function(callback) {
 		var res = -1;
 		for (var i = 0; i < _arr.length; i++) {
-			if (callback(_arr[i],i,this)) {
+			if (callback(_transform(_arr[i]),i,this)) {
 				res = i;
 				break;
 			}
@@ -175,7 +178,7 @@ function ImmutableArray(mutableArr) {
 	};
 	this.forEach = function(callback) {
 		for (var i = 0; i < _arr.length; i++) {
-			callback(_arr[i],i,this);
+			callback(_transform(_arr[i]),i,this);
 		}
 	};
 	this.indexOf = function(searchElement,fromIndex) {
@@ -198,9 +201,9 @@ function ImmutableArray(mutableArr) {
 		var res;
 		if (_arr.length !== 0) {
 			var hasInitVal = typeof initialValue !== "undefined";
-			res = hasInitVal ? initialValue : _arr[0];
+			res = hasInitVal ? initialValue : _transform(_arr[0]);
 			for (var i = hasInitVal ? 0 : 1; i < _arr.length; i++) {
-				res = callback(res,_arr[i],i,this);
+				res = callback(res,_transform(_arr[i]),i,this);
 			}
 		}
 		return res;
@@ -209,9 +212,9 @@ function ImmutableArray(mutableArr) {
 		var res;
 		if (_arr.length !== 0) {
 			var hasInitVal = typeof initialValue !== "undefined";
-			res = hasInitVal ? initialValue : _arr[_arr.length - 1];
+			res = hasInitVal ? initialValue : _transform(_arr[_arr.length - 1]);
 			for (var i = _arr.length - (hasInitVal ? 1 : 2); i >= 0; i--) {
-				res = callback(res,_arr[i],i,this);
+				res = callback(res,_transform(_arr[i]),i,this);
 			}
 		}
 		return res;
@@ -222,7 +225,7 @@ function ImmutableArray(mutableArr) {
 	this.some = function(callback) {
 		var res = false;
 		for (var i = 0; !res && i < _arr.length; i++) {
-			res = callback(_arr[i],i,this);
+			res = callback(_transform(_arr[i]),i,this);
 		}
 		return res;
 	};
@@ -775,7 +778,9 @@ var COM = new (function() {
 		var _newLine = newLine;
 		var _associationsLength = 0; // Object.keys(obj).length is O(n)
 		var _success;
-		var _entriesImmutable = new ImmutableArray(_entries);
+		var _entriesImmutable = new ImmutableArray(_entries,function(entry) {
+			return new _this.String(entry);
+		});
 		var _associationsImmutable = new ImmutableObject(_associations);
 		var _childrenImmutable = new ImmutableArray(_children);
 		var _this2 = this;
@@ -1133,14 +1138,16 @@ var COM = new (function() {
 			// 	.children references
 			_owner = node.owner;
 			_parent = node.parent;
-			_name = node.name;
+			_name = node.name.rawString;
 			_entries = _arrayClone(node.entries);
 			_associations = _objectClone(node.associations);
 			_childen = _arrayClone(node.children);
 			_newLine = node.newLine;
 			_associationsLength = node.associationsLength;
 			_success = node.success;
-			_entriesImmutable = new ImmutableArray(_entries);
+			_entriesImmutable = new ImmutableArray(_entries,function(entry) {
+				return new _this.String(entry);
+			});
 			_associationsImmutable = new ImmutableObject(_associations);
 			_childrenImmutable = new ImmutableArray(_children);
 		});
@@ -1226,7 +1233,7 @@ var COM = new (function() {
 			deep = _applyDefault(deep,false);
 			var res = false;
 			for (var i = 0; i < _children.length; i++) {
-				res = _children[i].name === name;
+				res = _children[i].name.rawString === name;
 				if (res) {
 					break;
 				} else if (deep) {
@@ -1240,7 +1247,7 @@ var COM = new (function() {
 		});
 		_defineMethod("getChildrenNamed",function(name,deep,pureArray) {
 			return _childGroupGet(deep,pureArray,function(child) {
-				return child.name === name;
+				return child.name.rawString === name;
 			});
 		});
 		_defineMethod("getChildNamed",function(name,deep,position) {
@@ -1463,7 +1470,7 @@ var COM = new (function() {
 		});
 		_defineMethod("allNodesNamed",function(name,pureArray) {
 			var res = [];
-			if (_globalNode.name === name) {
+			if (_globalNode.name.rawString === name) {
 				res.push(_globalNode);
 			}
 			res = res.concat(_globalNode.getChildrenNamed(name,true,true));

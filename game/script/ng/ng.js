@@ -119,11 +119,6 @@ var Engine = new (function() {
 			this.ROOM_IMAGE = _this2.CONFIG_ENGINE_PREFIX+"image";
 			this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
 			this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
-			this.MATH_OP_ONE_VAR = _this2.CONFIG_ENGINE_PREFIX+"var";
-			this.MATH_OP_ONE_LITERAL = _this2.CONFIG_ENGINE_PREFIX+"literal";
-			this.MATH_OP_MANY_VARS = _this3.MATH_OP_ONE_VAR+"s";
-			this.MATH_OP_MANY_LITERALS = _this3.MATH_OP_ONE_LITERAL+"s";
-			this.MATH_OP_OUTPUT = _this2.CONFIG_ENGINE_PREFIX+"out";
 		})();
 		this.execution = new(function() {
 			var _this3 = this;
@@ -136,9 +131,9 @@ var Engine = new (function() {
 			this.FLOW_CONDITION = _this2.CONFIG_ENGINE_PREFIX+"limit";
 			this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
 			this.FLOW_ELSE = _this2.CONFIG_ENGINE_PREFIX+"else";
-			this.FLOW_ELSE_IF = _this2.CONFIG_ENGINE_PREFIX+"elseIf";
 			this.STATE_GET_VAR = _this2.CONFIG_ENGINE_PREFIX+"get";
-			this.STATE_SET_VAR = _this2.CONFIG_ENGINE_PREFIX+"set";
+			this.STATE_SET_VAR_BY_VAR = _this2.CONFIG_ENGINE_PREFIX+"setToVar";
+			this.STATE_SET_VAR_BY_LITERAL = _this2.CONFIG_ENGINE_PREFIX+"setToLiteral";
 			this.STATE_VAR_IS_DEFINED = _this2.CONFIG_ENGINE_PREFIX+"isDefined";
 			this.STATE_DEFINE_VAR = _this2.CONFIG_ENGINE_PREFIX+"define";
 			this.LOGIC_AND = _this2.CONFIG_ENGINE_PREFIX+"AND";
@@ -173,6 +168,9 @@ var Engine = new (function() {
 			this.CMP_LTEQ = _this2.CONFIG_ENGINE_PREFIX+"LTEQ";
 			this.CMP_GTEQ = _this2.CONFIG_ENGINE_PREFIX+"GTEQ";
 			// End expandability clauses
+			this.OP_VARS = _this2.CONFIG_ENGINE_PREFIX+"vars";
+			this.OP_LITERALS = _this2.CONFIG_ENGINE_PREFIX+"literals";
+			this.OP_OUTPUT = _this2.CONFIG_ENGINE_PREFIX+"out";
 		})();
 		this.io = new(function() {
 			var _this3 = this;
@@ -192,7 +190,6 @@ var Engine = new (function() {
 				this.COMMON_ROOMS = _this4.COMMON_ENGINE+"rooms";
 				this.COMMON_GRAPH = _this4.COMMON_ENGINE+"graph";
 				this.COMMON_IMAGES = _this4.COMMON_ENGINE+"images";
-				this.COMMON_ROOMS = _this4.COMMON_ENGINE+"objects";
 				this.STYLE_ROOT = "style/";
 				this.STYLE_USER = _this4.STYLE_ROOT+_this3.USER_ID+"/";
 				this.GFX_ROOT = "gfx/";
@@ -235,7 +232,6 @@ var Engine = new (function() {
 	// TODO: Use this object for defining scoping when reading state.cfg
 	var Scope = function(name) {
 		var _this2 = this;
-		var _flags = [];
 		var _vars = {};
 		var _children = [];
 		var _parent = null;
@@ -300,40 +296,12 @@ var Engine = new (function() {
 		_defineMethod("_setVar",function(v,value) {
 			_vars[v] = value;
 		});
-		_defineMethod("hasFlag",function(flag) {
-			var res;
-			if (_flags.indexOf(flag) !== -1) {
-				res = true;
-			} else if (_this2.hasParent) {
-				res = _parent.hasFlag(flag);
-			} else {
-				res = false;
-			}
-			return res;
+		_defineMethod("hasVariable",function(v) {
+			return typeof _this2.getVariable(v) !== "undefined";
 		});
-		_defineMethod("addFlag",function(flag) {
-			var res = !_this2.hasFlag(flag);
-			if (res) {
-				_flags.push(flag);
-			}
-			return res;
-		});
-		_defineMethod("removeFlag",function(flag) {
-			var res;
-			var index = _flags.indexOf(flag);
-			if (index !== -1) {
-				_flags.splice(index,1);
-				res = true;
-			} else if (_this2.hasParent) {
-				res = _parent.removeFlag(flag);
-			} else {
-				res = false;
-			}
-			return res;
-		});
-		_defineMethod("getVariable",function(v,value) {
+		_defineMethod("getVariable",function(v) {
 			var scope = _this2._getVarScope(v);
-			return scope !== null ? scope._getVar(v) === value : false;
+			return scope !== null ? scope._getVar(v) : undefied;
 		});
 		_defineMethod("setVariable",function(v,value) {
 			var scope = _this2._getVarScope(v);
@@ -570,23 +538,355 @@ var Engine = new (function() {
 		});
 	})();
 
-	var Action = function(key,callback) {
-		this.key = key;
-		this.callback = callback;
+	var EngineEvent = function(node) {
+		var _this2 = this;
+		var _commands = [];
+		this.push = function(cmd) {
+			_commands.push(cmd);
+		};
+		this.forEach = function(callback) {
+			for (var i = 0; i < _commands.length; i++) {
+				callback(_commands[i]);
+			}
+		};
+		this.execute = function(context) {
+			context = typeof context !== "undefined" ? context : {
+				stack: new EngineEvent.ScopeStack(_state),
+				logBroken: false
+			};
+			this.forEach(function(cmd) {
+				cmd.execute(context);
+			});
+		};
+		this.attemptMath = function(child,name,context) {
+			var res;
+			switch (name) {
+				// TODO: switch/apply math functions
+			}
+			return res;
+		};
+		this.attemptScoping = function(child,name,context) {
+			if (name.startsWith(_this.Consts.CONFIG_ENGINE_PREFIX)) {
+				throw new Error("Unexpected engine-defined child \""+name+"\".");
+			} else {
+				// TODO: scoping
+			}
+		};
+		if (typeof node !== "undefined") {
+			// TODO: Construction
+			var cmd;
+			node.children.forEach(function(child) {
+				var name = child.name.rawString;
+				switch (name) {
+					case _this.Consts.execution.FLOW_IF:
+						cmd = new IfEvent(child);
+						break;
+					case _this.Consts.execution.STATE_SET_VAR:
+
+						break;
+					case _this.Consts.execution.STATE_DEFINE_VAR:
+
+						break;
+					case _this.Consts.execution.ACTION_MOVE:
+
+						break;
+					case _this.Consts.execution.ACTION_EXAMINE:
+
+						break;
+					case _this.Consts.execution.ACTION_INTERACT:
+
+						break;
+					case _this.Consts.execution.ACTION_LOG:
+
+						break;
+					case _this.Consts.execution.ACTION_LOG_NO_BREAK:
+
+						break;
+					default:
+						cmd = this.attemptMath(child,name,context); 
+						if (typeof cmd === "undefined") {
+							cmd = this.attemptScoping(child,name,context);
+						}
+						break;
+				}
+				_this2.push(cmd);
+			});
+		}
+	};
+	EngineEvent.ScopeStack = function(root) {
+		var _stack = [root];
+		this.peek = function() {
+			return _stack[_stack.length - 1];
+		};
+		this.push = function(scope) {
+			_stack.push(scope);
+		};
+		this.pop = function() {
+			return _stack.pop();
+		};
+	};
+	EngineEvent.NO_OP = new EngineEvent();
+	EngineEvent.prototype.constructor = EngineEvent;
+	var IfEvent = function(node) {
+		EngineEvent.call(this);
+		var _limit = new AndEvent(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
+		var _then = new EngineEvent(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
+		var _else = new EngineEvent(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
+		this.execute = function(context) {
+			if (_limit.execute(context)) {
+				_then.execute(context);
+			} else {
+				_else.execute(context);
+			}
+		};
+	};
+	IfEvent.prototype = EngineEvent.prototype;
+	IfEvent.prototype.constructor = IfEvent;
+	var LimitEvent = function(node) {
+		EngineEvent.call(this);
+		this.execute = function(context) {
+			var res = new LimitEvent.Data();
+			this.forEach(function(cmd) {
+				if (cmd.execute(context)) {
+					res.trueCount++;
+				}
+				res.totalCount++;
+			});
+			return trueCount;
+		};
+		node.children.forEach(function(child) {
+			// TODO: Construction
+			var name = child.name.rawString;
+			var cmd;
+			switch (name) {
+				case _this.Consts.execution.STATE_VAR_IS_DEFINED:
+					cmd = new VarIsDefinedEvent(child);
+					break;
+				case _this.Consts.execution.LOGIC_AND:
+
+					break;
+				case _this.Consts.execution.LOGIC_OR:
+
+					break;
+				case _this.Consts.execution.LOGIC_NAND:
+
+					break;
+				case _this.Consts.execution.LOGIC_NOR:
+
+					break;
+				case _this.Consts.execution.LOGIC_XOR:
+
+					break;
+				case _this.Consts.execution.LOGIC_XNOR:
+
+					break;
+				case _this.Consts.execution.LOGIC_MUTEX:
+
+					break;
+				case _this.Consts.execution.CMP_EQ:
+
+					break;
+				case _this.Consts.execution.CMP_NEQ:
+
+					break;
+				case _this.Consts.execution.CMP_LT:
+
+					break;
+				case _this.Consts.execution.CMP_GT:
+
+					break;
+				case _this.Consts.execution.CMP_LTEQ:
+
+					break;
+				case _this.Consts.execution.CMP_GTEQ:
+
+					break;
+				default:
+					cmd = this.attemptMath(child,name,context);
+					if (typeof cmd === "undefined") {
+						cmd = this.attemptScoping(child,name,context);
+					}
+					break;
+			}
+			this.push(cmd);
+		});
+	};
+	LimitEvent.Data = function() {
+		this.trueCount = 0;
+		this.totalCount = 0;
+	};
+	LimitEvent.prototype = EngineEvent.prototype;
+	LimitEvent.prototype.constructor = LimitEvent;
+	var VarIsDefinedEvent = function(node) {
+		EngineEvent.call(this);
+		var _vars = [];
+		this.execute = function(context) {
+			var res = true;
+			for (var i = 0; res && i < _vars.length; i++) {
+				res = context.stack.peek().hasVariable(_vars[i]);
+			}
+			return res;
+		};
+		node.entries.forEach(function(entry) {
+			_vars.push(entry.rawString);
+		});
+	};
+	VarIsDefinedEvent.prototype = LimitEvent.prototype;
+	VarIsDefinedEvent.prototype.constructor = VarIsDefinedEvent;
+	var AndEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount === data.totalCount;
+		};
+	};
+	AndEvent.prototype = LimitEvent.prototype;
+	AndEvent.prototype.constructor = AndEvent;
+	Var OrEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount > 0;
+		};
+	};
+	OrEvent.prototype = LimitEvent.prototype;
+	OrEvent.prototype.constructor = OrEvent;
+	Var NandEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount !== data.totalCount;
+		};
+	};
+	NandEvent.prototype = LimitEvent.prototype;
+	NandEvent.prototype.constructor = NandEvent;
+	Var NorEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount === 0;
+		};
+	};
+	NorEvent.prototype = LimitEvent.prototype;
+	NorEvent.prototype.constructor = NorEvent;
+	Var XorEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount%2 === 1;
+		};
+	};
+	XorEvent.prototype = LimitEvent.prototype;
+	XorEvent.prototype.constructor = XorEvent;
+	Var XnorEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount%2 === 0;
+		};
+	};
+	XnorEvent.prototype = LimitEvent.prototype;
+	XnorEvent.prototype.constructor = XnorEvent;
+	Var MutexEvent = function(node) {
+		LimitEvent.call(this,node);
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var data = _parentExec(context);
+			return data.trueCount === 1;
+		};
+	};
+	MutexEvent.prototype = LimitEvent.prototype;
+	MutexEvent.prototype.constructor = MutexEvent;
+
+	var ImageReference = function(id,node) {
+		if (typeof id !== "undefined") {
+			this.id = id;
+			this.filePath = _this.Consts.io.paths.GFX_USER+node.name.rawString;
+			this.artist = node.getAssociation(_this.Consts.definition.IMAGE_ARTIST).rawString;
+			this.source = node.getAssociation(_this.Consts.definition.IMAGE_SOURCE).rawString;
+		}
+	};
+	var ObjectReference = function(id,node) {
+		var _this2 = this;
+		this.id = id;
+		this.name = node.getAssociation(_this.Consts.definition.NAME).rawString;
+		this.desc = node.getAssociation(_this.Consts.definition.DESC).rawString;
+		this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).rawString) : false;
+		this.onInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT) ? new EngineEvent(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineEvent.NO_OP;
+	};
+	var Room = function(id,node) {
+		var _this2 = this;
+		this.id = id;
+		this.name = node.getAssociation(_this.Consts.definition.NAME).rawString;
+		this.desc = node.getAssociation(_this.Consts.definition.DESC).rawString;
+		this.imageId = node.hasAssociation(_this.Consts.definition.ROOM_IMAGE) ? node.getAssociation(_this.Consts.definition.ROOM_IMAGE) : null;
+		this.contents = [];
+		this.getImage = function() {
+			return this.imageId !== null ? _images[this.imageId] : _imageAlpha;
+		};
+		if (node.hasChildNamed(_this.Consts.definition.ROOM_CONTENTS)) {
+			node.getChildNamed(_this.Consts.definition.ROOM_CONTENTS).entries.forEach(function(entry) {
+				if (_objects.hasOwnProperty(entry.rawString)) {
+					_this2.contents.push(_objects[entry.rawString]);
+				} else {
+					throw new Error("Object \""+entry.rawString+"\" is undefined.");
+				}
+			});
+		}
+	};
+	var Graph = function() {
+		var _arr = [];
+		this.getEdge = function(from,to) {
+			if (typeof to !== "undefined") {
+				to = from.to.id;
+				from = from.from.id;
+			}
+			var res;
+			var entry;
+			for (var i = 0; i < _arr.length; i++) {
+				entry = _arr[i];
+				if (entry.from.id === from && entry.to.id === to) {
+					res = entry;
+					break;
+				}
+			}
+			return res;
+		};
+		this.push = function(edge) {
+			if (typeof this.getEdge(edge) !== "undefined") {
+				throw new Error("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.");
+			} else {
+				_arr.push(edge);
+			}
+		};
+	};
+	var GraphEdge = function(from,to,node) {
+		this.from = _rooms[from];
+		this.to = _rooms[to];
+		this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineEvent(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineEvent.NO_OP;
 	};
 
-	var _topLevelActions = [
-		new Action(_this.Consts.execution.ACTION_MOVE,function() {
-			// TODO: Change player location
-		}),
-		new Action(_this.Consts.execution.ACTION_EXAMINE,function() {
-			// TODO: Display object examination text
-		}),
-		new Action(_this.Consts.execution.ACTION_INTERACT,function() {
-			// TODO: Execute object interaction function
-		})
-	];
-
+	// CFG
+	var _roomsMap;
+	var _objectsMap;
+	var _graphMap;
+	var _state;
+	var _images;
+	var _rooms;
+	var _objects;
+	var _graph;
+	var _imageAlpha = new ImageReference();
+	_imageAlpha.id = "alpha";
+	_imageAlpha.filePath = _this.Consts.io.paths.GFX_ENGINE+"alpha.png";
+	_imageAlpha.artist = "";
+	_imageAlpha.source = "";
+	// HTML
 	var _container;
 	var _containerContent;
 	var _log;
@@ -595,6 +895,16 @@ var Engine = new (function() {
 	var _actions;
 	var _quests;
 
+	var _parseBool = function(str) {
+		str = str.toLowerCase();
+		if (str === "true") {
+			return true;
+		} else if (str === "false") {
+			return false;
+		} else {
+			throw new RangeError("Cannot convert value \""+str+"\" to a Boolean.");
+		}
+	};
 	var _wrapCallback = function(req,manager,callback) {
 		req.execute(function(res) {
 			if (res.error) {
@@ -622,6 +932,89 @@ var Engine = new (function() {
 		map.globalNode.children.forEach(function(child) {
 			LocalizationMap.setGroup(child.name.rawString,child);
 		});
+	};
+	var _parseState = function(node) {
+		var res = new Scope(node.name.rawString);
+		node.associations.forEach(function(key,value) {
+			res.setVariable(key,value.rawString);
+		});
+		node.children.forEach(function(child) {
+			res.addChild(_parseState(child));
+		});
+		return res;
+	};
+	var _parseImages = function(map) {
+		try {
+			_images = {};
+			var id;
+			map.globalNode.children.forEach(function(child) {
+				id = child.getAssociation(_this.Consts.definition.IMAGE_ID).rawString;
+				if (_images.hasOwnProperty(id)) {
+					throw new Error("An image with I.D. \""+id+"\" already exists.");
+				} else {
+					_images[id] = new ImageReference(id,child);
+				}
+			});
+		} catch (e) {
+			e.message += " (in image with I.D. \""+id+"\")";
+			throw e;
+		}
+	};
+	var _parseObjects = function() {
+		try {
+			_objects = {};
+			var id;
+			_objectsMap.globalNode.children.forEach(function(child) {
+				id = child.name.rawString;
+				if (_objects.hasOwnProperty(id)) {
+					throw new Error("An object with I.D. \""+id+"\" already exists.");
+				} else {
+					_objects[id] = new ObjectReference(id,child);
+				}
+			});
+		} catch (e) {
+			e.message += " (in object with I.D. \""+id+"\")";
+			throw e;
+		}
+	};
+	var _parseRooms = function() {
+		try {
+			_rooms = {};
+			var id;
+			_roomsMap.globalNode.children.forEach(function(child) {
+				id = child.name.rawString;
+				if (_rooms.hasOwnProperty(id)) {
+					throw new Error("A room with I.D. \""+id+"\" already exists.");
+				} else {
+					_rooms[id] = new Room(id,child);
+				}
+			});
+		} catch (e) {
+			e.message += " (in room with I.D. \""+id+"\")";
+			throw e;
+		}
+	};
+	var _parseGraph = function() {
+		try {
+			_graph = new Graph();
+			var name;
+			var from;
+			var to;
+			_graphMap.globalNode.children.forEach(function(child) {
+				from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
+				to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
+				name = child.name.rawString;
+				if (name === _this.Consts.definition.GRAPH_EDGE) {
+					_graph.push(new GraphEdge(from,to,child));
+				} else {
+					throw new Error("Unexpected child \""+name+"\" in graph definition.");
+				}
+			});
+// GRAPH_DESTINATION, GRAPH_EVT_FIRST_TRAVRSAL
+		} catch (e) {
+			e.message += " (in graph edge from \""+from+"\" to \""+to+"\")";
+			throw e;
+		}
 	};
 
 	var _htmlToNodes = function(html,container) {
@@ -660,20 +1053,32 @@ var Engine = new (function() {
 		_container = document.getElementById("container");
 		_containerContent = container.innerHTML;
 
-		var manager = new LoadCounter(4,_container);
+		var manager = new LoadCounter(7,_container);
 		manager.onLoad = function() {
-			_container.innerHTML = _containerContent;
-			_log = document.getElementById(_this.Consts.html.page.LOG);
-			_image = document.getElementById(_this.Consts.html.page.IMAGE);
-			_inv = document.getElementById(_this.Consts.html.page.INV);
-			_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
-			_quests = document.getElementById(_this.Consts.html.page.QUESTS);
+			var good = true;
+			try {
+				_parseObjects();
+				_parseRooms();
+				//_parseGraph();
+			} catch (e) {
+				manager.error(e,null);
+				good = false;
+			}
 
-			_log.textContent = "";
-			_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
-			_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
-			_actions.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
-			_quests.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+			if (good) {
+				_container.innerHTML = _containerContent;
+				_log = document.getElementById(_this.Consts.html.page.LOG);
+				_image = document.getElementById(_this.Consts.html.page.IMAGE);
+				_inv = document.getElementById(_this.Consts.html.page.INV);
+				_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
+				_quests = document.getElementById(_this.Consts.html.page.QUESTS);
+
+				_log.textContent = "";
+				_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
+				_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
+				_actions.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
+				_quests.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+			}
 		};
 		var query = location.search;
 		if (query.length !== 0) {
@@ -703,38 +1108,37 @@ var Engine = new (function() {
 			
 		});
 		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
-		req3.execute(function(res) {
-			console.log(res.text);
-			if (res.error) {
-				manager.error(new Error(res.text),res);
-			} else {
-				manager.increment();
-			}
+		_wrapCallback(req3,manager,function(res) {
+			_state = _parseState(new COM.Map(res.text).globalNode,"global");
 		});
 		var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req4.data = {
-			folder: _this.Consts.io.paths.COMMON_OBJECTS
+			folder: _this.Consts.io.paths.COMMON_IMAGES
 		};
-		req4.execute(function(res) {
-			if (res.error) {
-				manager.error(new Error(res.text),res);
-			} else {
-				manager.increment();
-			}
+		_wrapCallback(req4,manager,function(res) {
+			_parseImages(new COM.Map(res.text));
 		});
 		var req5 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req5.data = {
 			folder: _this.Consts.io.paths.COMMON_ROOMS
 		};
-		req5.execute(function(res) {
-			if (res.error) {
-				manager.error(new Error(res.text),res);
-			} else {
-				manager.increment();
-			}
+		_wrapCallback(req5,manager,function(res) {
+			_roomsMap = new COM.Map(res.text);
 		});
-		// TODO: more requests for other common/ng folders
-		// TODO: get common/ng/state.cfg and build Scope objects from that
+		var req6 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
+		req6.data = {
+			folder: _this.Consts.io.paths.COMMON_OBJECTS
+		};
+		_wrapCallback(req6,manager,function(res) {
+			_objectsMap = new COM.Map(res.text);
+		});
+		var req7 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
+		req7.data = {
+			folder: _this.Consts.io.paths.COMMON_GRAPH
+		};
+		_wrapCallback(req7,manager,function(res) {
+			_graphMap = new COM.Map(res.text);
+		});
 	});
 })();
 
