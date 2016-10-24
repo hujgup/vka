@@ -134,8 +134,6 @@ var Engine = new (function() {
 			this.STATE_GET_VAR = _this2.CONFIG_ENGINE_PREFIX+"get";
 			this.STATE_SET_VAR_BY_VAR = _this2.CONFIG_ENGINE_PREFIX+"setToVar";
 			this.STATE_SET_VAR_BY_LITERAL = _this2.CONFIG_ENGINE_PREFIX+"setToLiteral";
-			this.STATE_VAR_IS_DEFINED = _this2.CONFIG_ENGINE_PREFIX+"isDefined";
-			this.STATE_DEFINE_VAR = _this2.CONFIG_ENGINE_PREFIX+"define";
 			this.LOGIC_AND = _this2.CONFIG_ENGINE_PREFIX+"AND";
 			this.LOGIC_OR = _this2.CONFIG_ENGINE_PREFIX+"OR";
 			this.LOGIC_NAND = _this2.CONFIG_ENGINE_PREFIX+"NAND";
@@ -151,8 +149,6 @@ var Engine = new (function() {
 			this.MATH_DIVIDE = _this2.CONFIG_ENGINE_PREFIX+"DIV";
 			this.MATH_MOD = _this2.CONFIG_ENGINE_PREFIX+"MOD";
 			this.MATH_EXP = _this2.CONFIG_ENGINE_PREFIX+"EXP";
-			this.MATH_INCREMENT = _this2.CONFIG_ENGINE_PREFIX+"INC";
-			this.MATH_DECREMENT = _this2.CONFIG_ENGINE_PREFIX+"DEC";
 			// Non-Expandable
 			this.MATH_LN = _this2.CONFIG_ENGINE_PREFIX+"LN";
 			this.MATH_LOG2 = _this2.CONFIG_ENGINE_PREFIX+"LOG2";
@@ -171,6 +167,9 @@ var Engine = new (function() {
 			this.OP_VARS = _this2.CONFIG_ENGINE_PREFIX+"vars";
 			this.OP_LITERALS = _this2.CONFIG_ENGINE_PREFIX+"literals";
 			this.OP_OUTPUT = _this2.CONFIG_ENGINE_PREFIX+"out";
+			this.REGEX_NUMBER = /^[+\-]?\d+(\.\d+)?(e[+\-]?\d+)?$/i;
+			this.REGEX_BOOLEAN = /^(true|false)$/;
+			this.BOOL_TRUE = "true";
 		})();
 		this.io = new(function() {
 			var _this3 = this;
@@ -229,7 +228,15 @@ var Engine = new (function() {
 	];
 	this.Consts = Object.freeze(this.Consts);
 
-	// TODO: Use this object for defining scoping when reading state.cfg
+	var _parseVarValue = function(str) {
+		if (_this.Consts.execution.REGEX_NUMBER.test(res)) {
+			res = parseFloat(res);
+		} else if (_this.Consts.execution.REGEX_BOOLEAN.test(res)) {
+			res = res === _this.Consts.execution.BOOL_TRUE;
+		}
+		return res;
+	};
+
 	var Scope = function(name) {
 		var _this2 = this;
 		var _vars = {};
@@ -301,14 +308,14 @@ var Engine = new (function() {
 		});
 		_defineMethod("getVariable",function(v) {
 			var scope = _this2._getVarScope(v);
-			return scope !== null ? scope._getVar(v) : undefied;
+			return scope !== null ? _parseVarValue(scope._getVar(v)) : undefined;
 		});
 		_defineMethod("setVariable",function(v,value) {
 			var scope = _this2._getVarScope(v);
 			if (scope !== null) {
 				scope._setVar(v,value);
 			} else {
-				_this2._setVar(v,value);
+				throw new Error("Variable '"+v+"' is undefined.");
 			}
 		});
 		_defineMethod("hasChild",function(child,deep) {
@@ -538,7 +545,7 @@ var Engine = new (function() {
 		});
 	})();
 
-	var EngineEvent = function(node) {
+	var EngineCommand = function(node) {
 		var _this2 = this;
 		var _commands = [];
 		this.push = function(cmd) {
@@ -551,25 +558,64 @@ var Engine = new (function() {
 		};
 		this.execute = function(context) {
 			context = typeof context !== "undefined" ? context : {
-				stack: new EngineEvent.ScopeStack(_state),
+				stack: new EngineCommand.ScopeStack(_state),
 				logBroken: false
 			};
 			this.forEach(function(cmd) {
 				cmd.execute(context);
 			});
 		};
-		this.attemptMath = function(child,name,context) {
+		this.attemptMath = function(child,name) {
 			var res;
 			switch (name) {
 				// TODO: switch/apply math functions
+				case _this.Consts.execution.MATH_ADD:
+					res = new MathAddCommand(child);
+					break;
+				case _this.Consts.execution.MATH_SUBTRACT:
+					res = new MathSubtractCommand(child);
+					break;
+				case _this.Consts.execution.MATH_MULTIPLY:
+					res = new MathMultiplyCommand(child);
+					break;
+				case _this.Consts.execution.MATH_DIVIDE:
+					res = new MathDivideCommand(child);
+					break;
+				case _this.Consts.execution.MATH_MOD:
+					res = new MathModCommand(child);
+					break;
+				case _this.Consts.execution.MATH_EXP:
+					res = new MathExpCommand(child);
+					break;
+				case _this.Consts.execution.MATH_LN:
+					res = new MathLnCommand(child);
+					break;
+				case _this.Consts.execution.MATH_LOG2:
+					res = new MathLog2Command(child);
+					break;
+				case _this.Consts.execution.MATH_LOG10:
+					res = new MathLog10Command(child);
+					break;
+				case _this.Consts.execution.MATH_ROUND:
+					res = new MathRoundCommand(child);
+					break;
+				case _this.Consts.execution.MATH_FLOOR:
+					res = new MathFloorCommand(child);
+					break;
+				case _this.Consts.execution.MATH_CEILING:
+					res = new MathCeilingCommand(child);
+					break;
+				case _this.Consts.execution.MATH_TRUNCATE:
+					res = new MathTruncateCommand(child);
+					break;
 			}
 			return res;
 		};
-		this.attemptScoping = function(child,name,context) {
+		this.attemptScoping = function(child,name) {
 			if (name.startsWith(_this.Consts.CONFIG_ENGINE_PREFIX)) {
 				throw new Error("Unexpected engine-defined child \""+name+"\".");
 			} else {
-				// TODO: scoping
+				return new ScopingCommand(child,name);
 			}
 		};
 		if (typeof node !== "undefined") {
@@ -579,12 +625,9 @@ var Engine = new (function() {
 				var name = child.name.rawString;
 				switch (name) {
 					case _this.Consts.execution.FLOW_IF:
-						cmd = new IfEvent(child);
+						cmd = new IfCommand(child);
 						break;
 					case _this.Consts.execution.STATE_SET_VAR:
-
-						break;
-					case _this.Consts.execution.STATE_DEFINE_VAR:
 
 						break;
 					case _this.Consts.execution.ACTION_MOVE:
@@ -603,9 +646,9 @@ var Engine = new (function() {
 
 						break;
 					default:
-						cmd = this.attemptMath(child,name,context); 
+						cmd = _this2.attemptMath(child,name); 
 						if (typeof cmd === "undefined") {
-							cmd = this.attemptScoping(child,name,context);
+							cmd = _this2.attemptScoping(child,name);
 						}
 						break;
 				}
@@ -613,7 +656,7 @@ var Engine = new (function() {
 			});
 		}
 	};
-	EngineEvent.ScopeStack = function(root) {
+	EngineCommand.ScopeStack = function(root) {
 		var _stack = [root];
 		this.peek = function() {
 			return _stack[_stack.length - 1];
@@ -625,13 +668,31 @@ var Engine = new (function() {
 			return _stack.pop();
 		};
 	};
-	EngineEvent.NO_OP = new EngineEvent();
-	EngineEvent.prototype.constructor = EngineEvent;
-	var IfEvent = function(node) {
-		EngineEvent.call(this);
-		var _limit = new AndEvent(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
-		var _then = new EngineEvent(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
-		var _else = new EngineEvent(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
+	EngineCommand.NO_OP = new EngineCommand();
+	EngineCommand.prototype.constructor = EngineCommand;
+	var ScopingCommand = function(node,name) {
+		EngineCommand.call(this,node);
+		var _name = name;
+		var _parentExec = this.execute;
+		this.execute = function(context) {
+			var child = context.stack.peek().getChildNamed(_name);
+			if (typeof child !== "undefined") {
+				context.stack.push(child);
+				var res = _parentExec(context);
+				context.stack.pop();
+				return res;
+			} else {
+				throw new Error("Scope '"+context.stack.peek().name+"' does not have a child '"+_name+"'.");
+			}
+		};
+	};
+	ScopingCommand.prototype = EngineCommand;
+	ScopingCommand.prototype.constructor = ScopingCommand;
+	var IfCommand = function(node) {
+		EngineCommand.call(this);
+		var _limit = new AndCommand(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
+		var _then = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
+		var _else = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
 		this.execute = function(context) {
 			if (_limit.execute(context)) {
 				_then.execute(context);
@@ -640,90 +701,270 @@ var Engine = new (function() {
 			}
 		};
 	};
-	IfEvent.prototype = EngineEvent.prototype;
-	IfEvent.prototype.constructor = IfEvent;
-	var LimitEvent = function(node) {
-		EngineEvent.call(this);
-		this.execute = function(context) {
-			var res = new LimitEvent.Data();
-			this.forEach(function(cmd) {
-				if (cmd.execute(context)) {
-					res.trueCount++;
-				}
-				res.totalCount++;
-			});
-			return trueCount;
+	IfCommand.prototype = EngineCommand.prototype;
+	IfCommand.prototype.constructor = IfCommand;
+	var MathCommand = function(node) {
+		EngineCommand.call(this);
+		var _this2 = this;
+		var _out;
+		this.initializeValue = function(value) {
+			return value;
 		};
+		this.getId = function() {
+		};
+		this.execCallback = function(current,value) {
+		};
+		this.execute = function(context) {
+			var values = [];
+			var component;
+			this.forEach(function(cmd) {
+				component = cmd.execute(context);
+				values.push(component);
+			});
+			if (values.length > 0) {
+				var res = this.initializeValue(values[0]);
+				for (var i = 1; i < values.length; i++) {
+					res = this.setupCallback(res,values[i]);
+				}
+				context.stack.peek().setVariable(_out,res.toString());
+				return res;
+			} else {
+				throw new Error(this.getId()+": no values to perform operation on.");
+			}
+		};
+		var _thisExec = this.execute;
 		node.children.forEach(function(child) {
-			// TODO: Construction
 			var name = child.name.rawString;
 			var cmd;
 			switch (name) {
-				case _this.Consts.execution.STATE_VAR_IS_DEFINED:
-					cmd = new VarIsDefinedEvent(child);
+				case _this.Consts.execution.OP_VARS:
+					cmd = new ComparisonVarsCommand(child);
 					break;
-				case _this.Consts.execution.LOGIC_AND:
-
-					break;
-				case _this.Consts.execution.LOGIC_OR:
-
-					break;
-				case _this.Consts.execution.LOGIC_NAND:
-
-					break;
-				case _this.Consts.execution.LOGIC_NOR:
-
-					break;
-				case _this.Consts.execution.LOGIC_XOR:
-
-					break;
-				case _this.Consts.execution.LOGIC_XNOR:
-
-					break;
-				case _this.Consts.execution.LOGIC_MUTEX:
-
-					break;
-				case _this.Consts.execution.CMP_EQ:
-
-					break;
-				case _this.Consts.execution.CMP_NEQ:
-
-					break;
-				case _this.Consts.execution.CMP_LT:
-
-					break;
-				case _this.Consts.execution.CMP_GT:
-
-					break;
-				case _this.Consts.execution.CMP_LTEQ:
-
-					break;
-				case _this.Consts.execution.CMP_GTEQ:
-
+				case _this.Consts.execution.OP_LITERALS:
+					cmd = new ComparisonLiteralsCommand(child);
 					break;
 				default:
-					cmd = this.attemptMath(child,name,context);
-					if (typeof cmd === "undefined") {
-						cmd = this.attemptScoping(child,name,context);
-					}
+					cmd = _this2.attemptScoping(child,name,context);
 					break;
 			}
-			this.push(cmd);
+			_this2.push(cmd);
+		});
+		_out = node.getAssociation(_this.Consts.execution.OP_OUTPUT).rawString;
+		if (typeof out === "undefined") {
+			throw new Error("Math operation output variable undefined.");
+		}
+	};
+	MathCommand.prototype = EngineCommand.prototype;
+	MathCommand.prototype.constructor = MathCommand;
+	var MathAddCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_ADD;
+		};
+		this.execCallback = function(current,value) {
+			return current + value;
+		};
+	};
+	MathAddCommand.prototype = MathCommand.prototype;
+	MathAddCommand.prototype.constructor = MathAddCommand;
+	var MathSubtractCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_SUBTRACT;
+		this.execCallback = function(current,value) {
+			return current - value;
+		};
+	};
+	MathSubtractCommand.prototype = MathCommand.prototype;
+	MathSubtractCommand.prototype.constructor = MathSubtractCommand;
+	var MathMultiplyCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_MULTIPLY;
+		};
+		this.execCallback = function(current,value) {
+			return current*value;
+		};
+	};
+	MathMultiplyCommand.prototype = MathCommand.prototype;
+	MathMultiplyCommand.prototype.constructor = MathMultiplyCommand;
+	var MathDivideCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_Divide;
+		};
+		this.execCallback = function(current,value) {
+			return current/value;
+		};
+	};
+	MathDivideCommand.prototype = MathCommand.prototype;
+	MathDivideCommand.prototype.constructor = MathDivideCommand;
+	var MathModCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_MOD;
+		};
+		this.execCallback = function(current,value) {
+			return current%value;
+		};
+	};
+	MathModCommand.prototype = MathCommand.prototype;
+	MathModCommand.prototype.constructor = MathModCommand;
+	var MathExpCommand = function(node) {
+		MathCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_EXP;
+		};
+		this.execCallback = function(current,value) {
+			return Math.pow(current,value);
+		};
+	};
+	MathExpCommand.prototype = MathCommand.prototype;
+	MathExpCommand.prototype.constructor = MathExpCommand;
+	var MathSingleCommand = function(node) {
+		MathCommand.call(this,node);
+		this.execCallback = function(current,value) {
+			return this.initializeValue(value);
+		};
+	};
+	MathSingleCommand.prototype = MathCommand.prototype;
+	MathSingleCommand.prototype.constructor = MathSingleCommand;
+	var MathLnCommand = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_LN;
+		};
+		this.initializeValue = function(value) {
+			return Math.log(value);
+		};
+	};
+	MathLnCommand.prototype = MathSingleCommand.prototype;
+	MathLnCommand.prototype.constructor = MathLnCommand;
+	var MathLog2Command = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_LOG2;
+		};
+		this.initializeValue = function(value) {
+			return Math.log2(value);
+		};
+	};
+	MathLog2Command.prototype = MathSingleCommand.prototype;
+	MathLog2Command.prototype.constructor = MathLog2Command;
+	var MathLog10Command = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_LOG10;
+		};
+		this.initializeValue = function(value) {
+			return Math.log10(value);
+		};
+	};
+	MathLog10Command.prototype = MathSingleCommand.prototype;
+	MathLog10Command.prototype.constructor = MathLog10Command;
+	var MathRoundCommand = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_ROUND;
+		};
+		this.initializeValue = function(value) {
+			return Math.round(value);
+		};
+	};
+	MathRoundCommand.prototype = MathSingleCommand.prototype;
+	MathRoundCommand.prototype.constructor = MathRoundCommand;
+	var MathFloorCommand = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_FLOOR;
+		};
+		this.initializeValue = function(value) {
+			return Math.floor(value);
+		};
+	};
+	MathFloorCommand.prototype = MathSingleCommand.prototype;
+	MathFloorCommand.prototype.constructor = MathFloorCommand;
+	var MathCeilingCommand = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_CEILING;
+		};
+		this.initializeValue = function(value) {
+			return Math.ceil(value);
+		};
+	};
+	MathCeilingCommand.prototype = MathSingleCommand.prototype;
+	MathCeilingCommand.prototype.constructor = MathCeilingCommand;
+	var MathTruncateCommand = function(node) {
+		MathSingleCommand.call(this,node);
+		this.getId = function() {
+			return _this.Consts.execution.MATH_TRUNCATE;
+		};
+		this.initializeValue = function(value) {
+			return Math.trunc(value);
+		};
+	};
+	MathTruncateCommand.prototype = MathSingleCommand.prototype;
+	MathTruncateCommand.prototype.constructor = MathTruncateCommand;
+	var ComparisonCommand = function(node) {
+		EngineCommand.call(this);
+		var _values = [];
+		this.setupExecCallback = function(cmp,value) {
+		};
+		this.setupExec = function(context,id) {
+			var values = _thisExec(context);
+			if (values.length > 0) {
+				var res = true;
+				var cmp = values[0];
+				for (var i = 1; res && i < values.length; i++) {
+					this.setupExecCallback(cmp,values[i]);
+				}
+				return res;
+			} else {
+				throw new Error(id+": no values to compare.");
+			}
+		};
+		this.execute = function(context) {
+			var values = [];
+			var component;
+			this.forEach(function(cmd) {
+				component = cmd.execute(context);
+				if (Array.isArray(component)) {
+					values = values.concat(component);
+				} else {
+					values.push(component);
+				}
+			});
+			return values;
+		};
+		var _thisExec = this.execute;
+		node.children.forEach(function(child) {
+			var name = child.name.rawString;
+			var cmd;
+			switch (name) {
+				case _this.Consts.execution.OP_VARS:
+					cmd = new ComparisonVarsCommand(child);
+					break;
+				case _this.Consts.execution.OP_LITERALS:
+					cmd = new ComparisonLiteralsCommand(child);
+					break;
+				default:
+					cmd = _this2.attemptScoping(child,name,context);
+					break;
+			}
+			_this2.push(cmd);
 		});
 	};
-	LimitEvent.Data = function() {
-		this.trueCount = 0;
-		this.totalCount = 0;
-	};
-	LimitEvent.prototype = EngineEvent.prototype;
-	LimitEvent.prototype.constructor = LimitEvent;
-	var VarIsDefinedEvent = function(node) {
-		EngineEvent.call(this);
+	ComparisonCommand.prototype = EngineCommand.prototype;
+	ComparisonCommand.prototype.constructor = ComparisonCommand;
+	var ComparisonVarsCommand = function(node) {
+		EngineCommand.call(this);
+		var _this2 = this;
 		var _vars = [];
 		this.execute = function(context) {
-			var res = true;
-			for (var i = 0; res && i < _vars.length; i++) {
-				res = context.stack.peek().hasVariable(_vars[i]);
+			var res = [];
+			for (var i = 0; i < _vars.length; i++) {
+				res.push(context.stack.peek().getVariable(_vars[i]));
 			}
 			return res;
 		};
@@ -731,78 +972,233 @@ var Engine = new (function() {
 			_vars.push(entry.rawString);
 		});
 	};
-	VarIsDefinedEvent.prototype = LimitEvent.prototype;
-	VarIsDefinedEvent.prototype.constructor = VarIsDefinedEvent;
-	var AndEvent = function(node) {
-		LimitEvent.call(this,node);
+	ComparisonVarsCommand.prototype = EngineCommand.prototype;
+	ComparisonVarsCommand.prototype.constructor = ComparisonVarsCommand;
+	var ComparisonLiteralsCommand = function(node) {
+		EngineCommand.call(this);
+		var _this2 = this;
+		var _literals = [];
+		this.execute = function(context) {
+			return _literals;
+		};
+		node.entries.forEach(function(entry) {
+			_literals.push(_parseVarValue(entry.rawString));
+		});
+	};
+	ComparisonLiteralsCommand.prototype = EngineCommand.prototype;
+	ComparisonLiteralsCommand.prototype.constructor = ComparisonLiteralsCommand;
+	var LimitCommand = function(node) {
+		EngineCommand.call(this);
+		var _this2 = this;
+		this.execute = function(context) {
+			var res = new LimitCommand.Data();
+			this.forEach(function(cmd) {
+				var value = cmd.execute(context);
+				if (typeof value === "boolean") {
+					if (value) {
+						res.trueCount++;
+					}
+					res.totalCount++;
+				}
+			});
+			return trueCount;
+		};
+		node.children.forEach(function(child) {
+			var name = child.name.rawString;
+			var cmd;
+			switch (name) {
+				case _this.Consts.execution.LOGIC_AND:
+					cmd = new AndCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_OR:
+					cmd = new OrCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_NAND:
+					cmd = new NandCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_NOR:
+				case _this.Consts.execution.LOGIC_NOR_ALIAS:
+					cmd = new NorCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_XOR:
+					cmd = new XorCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_XNOR:
+					cmd = new XnorCommand(child);
+					break;
+				case _this.Consts.execution.LOGIC_MUTEX:
+					cmd = new MutexCommand(child);
+					break;
+				case _this.Consts.execution.CMP_EQ:
+					cmd = new EqualsCommand(child);
+					break;
+				case _this.Consts.execution.CMP_NEQ:
+					cmd = new NotEqualsCommand(child);
+					break;
+				case _this.Consts.execution.CMP_LT:
+					cmd = new LessThanCommand(child);
+					break;
+				case _this.Consts.execution.CMP_GT:
+					cmd = GreaterThanCommand(child);
+					break;
+				case _this.Consts.execution.CMP_LTEQ:
+					cmd = LessThanOrEqualToCommand(child);
+					break;
+				case _this.Consts.execution.CMP_GTEQ:
+					cmd = GreaterThanOrEqualTo(child);
+					break;
+				default:
+					cmd = _this2.attemptMath(child,name);
+					if (typeof cmd === "undefined") {
+						cmd = _this2.attemptScoping(child,name);
+					}
+					break;
+			}
+			_this2.push(cmd);
+		});
+	};
+	LimitCommand.Data = function() {
+		this.trueCount = 0;
+		this.totalCount = 0;
+	};
+	LimitCommand.prototype = EngineCommand.prototype;
+	LimitCommand.prototype.constructor = LimitCommand;
+	var EqualsCommand = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp === value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_EQ);
+		};
+	};
+	EqualsCommand.prototype = ComparisonCommand.prototype;
+	EqualsCommand.prototype.constructor = EqualsCommand;
+	var NotEqualsCommand = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp !== value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_NEQ);
+		};
+	};
+	NotEqualsCommand.prototype = ComparisonCommand.prototype;
+	NotEqualsCommand.prototype.constructor = NotEqualsCommand;
+	var LessThanCommand = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp < value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_LT);
+		};
+	};
+	LessThanCommand.prototype = ComparisonCommand.prototype;
+	LessThanCommand.prototype.constructor = LessThanCommand;
+	var GreaterThanCommand = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp > value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_GT);
+		};
+	};
+	GreaterThanCommand.prototype = ComparisonCommand.prototype;
+	GreaterThanCommand.prototype.constructor = GreaterThanCommand;
+	var LessThanOrEqualTo = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp <= value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_LTEQ);
+		};
+	};
+	LessThanOrEqualTo.prototype = ComparisonCommand.prototype;
+	LessThanOrEqualTo.prototype.constructor = LessThanOrEqualTo;
+	var GreaterThanOrEqualToCommand = function(node) {
+		ComparisonCommand.call(this,node);
+		this.setupExecCallback = function(cmp,value) {
+			return cmp >= value;
+		};
+		this.execute = function(context) {
+			return this.setupExec(context,_this.Consts.execution.CMP_GTEQ);
+		};
+	};
+	GreaterThanOrEqualTo.prototype = ComparisonCommand.prototype;
+	GreaterThanOrEqualTo.prototype.constructor = GreaterThanOrEqualTo;
+	var AndCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount === data.totalCount;
 		};
 	};
-	AndEvent.prototype = LimitEvent.prototype;
-	AndEvent.prototype.constructor = AndEvent;
-	Var OrEvent = function(node) {
-		LimitEvent.call(this,node);
+	AndCommand.prototype = LimitCommand.prototype;
+	AndCommand.prototype.constructor = AndCommand;
+	Var OrCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount > 0;
 		};
 	};
-	OrEvent.prototype = LimitEvent.prototype;
-	OrEvent.prototype.constructor = OrEvent;
-	Var NandEvent = function(node) {
-		LimitEvent.call(this,node);
+	OrCommand.prototype = LimitCommand.prototype;
+	OrCommand.prototype.constructor = OrCommand;
+	Var NandCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount !== data.totalCount;
 		};
 	};
-	NandEvent.prototype = LimitEvent.prototype;
-	NandEvent.prototype.constructor = NandEvent;
-	Var NorEvent = function(node) {
-		LimitEvent.call(this,node);
+	NandCommand.prototype = LimitCommand.prototype;
+	NandCommand.prototype.constructor = NandCommand;
+	Var NorCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount === 0;
 		};
 	};
-	NorEvent.prototype = LimitEvent.prototype;
-	NorEvent.prototype.constructor = NorEvent;
-	Var XorEvent = function(node) {
-		LimitEvent.call(this,node);
+	NorCommand.prototype = LimitCommand.prototype;
+	NorCommand.prototype.constructor = NorCommand;
+	Var XorCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount%2 === 1;
 		};
 	};
-	XorEvent.prototype = LimitEvent.prototype;
-	XorEvent.prototype.constructor = XorEvent;
-	Var XnorEvent = function(node) {
-		LimitEvent.call(this,node);
+	XorCommand.prototype = LimitCommand.prototype;
+	XorCommand.prototype.constructor = XorCommand;
+	Var XnorCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount%2 === 0;
 		};
 	};
-	XnorEvent.prototype = LimitEvent.prototype;
-	XnorEvent.prototype.constructor = XnorEvent;
-	Var MutexEvent = function(node) {
-		LimitEvent.call(this,node);
+	XnorCommand.prototype = LimitCommand.prototype;
+	XnorCommand.prototype.constructor = XnorCommand;
+	Var MutexCommand = function(node) {
+		LimitCommand.call(this,node);
 		var _parentExec = this.execute;
 		this.execute = function(context) {
 			var data = _parentExec(context);
 			return data.trueCount === 1;
 		};
 	};
-	MutexEvent.prototype = LimitEvent.prototype;
-	MutexEvent.prototype.constructor = MutexEvent;
+	MutexCommand.prototype = LimitCommand.prototype;
+	MutexCommand.prototype.constructor = MutexCommand;
 
 	var ImageReference = function(id,node) {
 		if (typeof id !== "undefined") {

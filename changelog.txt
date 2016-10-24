@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.1.0
+* Defined all execution statements except var set and the global actions.
+
 ## v0.2.0.0
 * Full common/ng parsing.
 * Started defining execution statements.
