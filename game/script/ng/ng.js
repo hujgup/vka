@@ -568,7 +568,6 @@ var Engine = new (function() {
 		this.attemptMath = function(child,name) {
 			var res;
 			switch (name) {
-				// TODO: switch/apply math functions
 				case _this.Consts.execution.MATH_ADD:
 					res = new MathAddCommand(child);
 					break;
