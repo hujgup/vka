@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.2.0
+* Defined all execution statements.
+
 ## v0.2.1.0
 * Defined all execution statements except var set and the global actions.
 

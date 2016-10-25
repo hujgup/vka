@@ -123,10 +123,12 @@ var Engine = new (function() {
 		this.execution = new(function() {
 			var _this3 = this;
 			this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"teleport";
+			this.ACTION_MOVE_TO = _this2.CONFIG_ENGINE_PREFIX+"to";
 			this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"examine";
+			this.ACTION_EXAMINE_OBJECT = _this2.CONFIG_ENGINE_PREFIX+"object";
 			this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"interact";
+			this.ACTION_INTERACT_OBJECT = this.ACTION_EXAMINE_OBJECT;
 			this.ACTION_LOG = _this2.CONFIG_ENGINE_PREFIX+"log";
-			this.ACTION_LOG_NO_BREAK = _this2.CONFIG_ENGINE_PREFIX+"logNoBreak";
 			this.FLOW_IF = _this2.CONFIG_ENGINE_PREFIX+"if";
 			this.FLOW_CONDITION = _this2.CONFIG_ENGINE_PREFIX+"limit";
 			this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
@@ -618,7 +620,6 @@ var Engine = new (function() {
 			}
 		};
 		if (typeof node !== "undefined") {
-			// TODO: Construction
 			var cmd;
 			node.children.forEach(function(child) {
 				var name = child.name.rawString;
@@ -627,22 +628,19 @@ var Engine = new (function() {
 						cmd = new IfCommand(child);
 						break;
 					case _this.Consts.execution.STATE_SET_VAR:
-
-						break;
-					case _this.Consts.execution.ACTION_MOVE:
-
-						break;
-					case _this.Consts.execution.ACTION_EXAMINE:
-
-						break;
-					case _this.Consts.execution.ACTION_INTERACT:
-
+						cmd = new SetVarCommand(child);
 						break;
 					case _this.Consts.execution.ACTION_LOG:
-
+						cmd = new LogCommand(child);
 						break;
-					case _this.Consts.execution.ACTION_LOG_NO_BREAK:
-
+					case _this.Consts.execution.ACTION_MOVE:
+						cmd = new MoveCommand(child);
+						break;
+					case _this.Consts.execution.ACTION_EXAMINE:
+						cmd = new ExamineCommand(child);
+						break;
+					case _this.Consts.execution.ACTION_INTERACT:
+						cmd = new InteractCommand(child);
 						break;
 					default:
 						cmd = _this2.attemptMath(child,name); 
@@ -687,6 +685,86 @@ var Engine = new (function() {
 	};
 	ScopingCommand.prototype = EngineCommand;
 	ScopingCommand.prototype.constructor = ScopingCommand;
+	var SetVarCommand = function(node) {
+		EngineCommand.call(this);
+		var assocs = [];
+		this.execute = function(context) {
+			assocs.forEach(function(entry) {
+				context.setVariable(entry[0],entry[1]);
+			});
+		};
+		node.associations.forEach(function(key,value) {
+			assocs.push([key,_parseVarValue(value)]);
+		});
+	};
+	SetVarCommand.prototype = EngineCommand.prototype;
+	SetVarCommand.prototype.constructor = SetVarCommand;
+	var MoveCommand = function(node) {
+		EngineCommand.call(this);
+		var _to;
+		this.execute = function(context) {
+			_teleportPlayer(_to);
+		};
+		_to = node.getAssociation(_this.Consts.execution.ACTION_MOVE_TO);
+		if (typeof _to !== "undefined") {
+			_to = _to.rawString;
+		} else {
+			throw new Error(_this.Consts.execution.ACTION_MOVE+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.");
+		}
+	};
+	MoveCommand.prototype = EngineCommand.prototype;
+	MoveCommand.prototype.constructor = MoveCommand;
+	var ExamineCommand = function(node) {
+		EngineCommand.call(this);
+		var _object;
+		this.examine = function(context) {
+			_examineObject(_object,context.logBroken);
+		};
+		_object = node.getAssociation(_this.Consts.execution.ACTION_EXAMINE_OBJECT);
+		if (typeof _object !== "undefined") {
+			_object = _object.rawString;
+		} else {
+			throw new Error(_this.Consts.execution.ACTION_EXAMINE+": Required association '"+_this.Consts.execution.ACTION_EXAMINE_OBJECT+"' is undefined.");
+		}
+	};
+	ExamineCommand.prototype = EngineCommand.prototype;
+	ExamineCommand.prototype.constructor = ExamineCommand;
+	var InteractCommand = function(node) {
+		EngineCommand.call(this);
+		var _object;
+		this.examine = function(context) {
+			_interactWithObject(_object,context);
+		};
+		_object = node.getAssociation(_this.Consts.execution.ACTION_INTERACT_OBJECT);
+		if (typeof _object !== "undefined") {
+			_object = _object.rawString;
+		} else {
+			throw new Error(_this.Consts.execution.ACTION_INTERACT+": Required association '"+_this.Consts.execution.ACTION_INTERACT_OBJECT+"' is undefined.");
+		}
+	};
+	InteractCommand.prototype = EngineCommand.prototype;
+	InteractCommand.prototype.constructor = InteractCommand;
+	var LogCommand = function(node) {
+		EngineCommand.call(this);
+		var _strings = [];
+		var _log = function(context,id) {
+			if (context.logBroken) {
+				_logPushNoBreak(id);
+			} else {
+				_logPush(id);
+			}
+		};
+		this.execute = function(context) {
+			_strings.forEach(function(id) {
+				_log(context,id);
+			});
+		};
+		node.entries.forEach = function(entry) {
+			_strings.push(entry.rawString);
+		};
+	};
+	LogCommand.prototype = EngineCommand.prototype;
+	LogCommand.prototype.constructor = LogCommand;
 	var IfCommand = function(node) {
 		EngineCommand.call(this);
 		var _limit = new AndCommand(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
@@ -1213,7 +1291,8 @@ var Engine = new (function() {
 		this.name = node.getAssociation(_this.Consts.definition.NAME).rawString;
 		this.desc = node.getAssociation(_this.Consts.definition.DESC).rawString;
 		this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).rawString) : false;
-		this.onInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT) ? new EngineEvent(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineEvent.NO_OP;
+		this.interactable = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
+		this.onInteract = this.interactable ? new EngineEvent(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineEvent.NO_OP;
 	};
 	var Room = function(id,node) {
 		var _this2 = this;
@@ -1225,6 +1304,7 @@ var Engine = new (function() {
 		this.getImage = function() {
 			return this.imageId !== null ? _images[this.imageId] : _imageAlpha;
 		};
+		
 		if (node.hasChildNamed(_this.Consts.definition.ROOM_CONTENTS)) {
 			node.getChildNamed(_this.Consts.definition.ROOM_CONTENTS).entries.forEach(function(entry) {
 				if (_objects.hasOwnProperty(entry.rawString)) {
@@ -1331,7 +1411,7 @@ var Engine = new (function() {
 	var _parseState = function(node) {
 		var res = new Scope(node.name.rawString);
 		node.associations.forEach(function(key,value) {
-			res.setVariable(key,value.rawString);
+			res.setVariable(key,_parseVarValue(value.rawString));
 		});
 		node.children.forEach(function(child) {
 			res.addChild(_parseState(child));
@@ -1405,26 +1485,49 @@ var Engine = new (function() {
 					throw new Error("Unexpected child \""+name+"\" in graph definition.");
 				}
 			});
-// GRAPH_DESTINATION, GRAPH_EVT_FIRST_TRAVRSAL
 		} catch (e) {
 			e.message += " (in graph edge from \""+from+"\" to \""+to+"\")";
 			throw e;
 		}
 	};
 
-	var _htmlToNodes = function(html,container) {
-		var root = document.createElement("div");
-		root.innerHTML = html;
-		while (root.childNodes.length > 0) {
-			container.appendChild(root.childNodes[0]);
+	var _teleportPlayer = function(to) {
+		if (_rooms.hasOwnProperty(to)) {
+			_state.setVariable(_this.Consts.definition.STATE_LOCATION,to);
+		} else {
+			throw new Error("Unable to move to room '"+to+"': no such room exists.");
 		}
 	};
-
-	_defineMethod("logPush",function(id) {
+	var _examineObject = function(id,breakFirst) {
+		breakFirst = typeof breakFirst !== "undefined" ? breakFirst : false;
+		if (_objects.hasOwnProperty(id)) {
+			var obj = _objects[id];
+			if (breakFirst) {
+				_logPush(obj.desc);
+			} else {
+				_logPushNoBreak(obj.desc);
+			}
+		} else {
+			throw new Error("Unable to examine object '"+id+"': no such object exists.");
+		}
+	};
+	var _interactWithObject = function(id,context) {
+		if (_objects.hasOwnProperty(id)) {
+			var obj = _objects[id];
+			if (obj.interactable) {
+				obj.onInteract(context);
+			} else {
+				throw new Error("Unable to interact with object '"+id+"': object does not define interaction behavior.");
+			}
+		} else {
+			throw new Error("Unable to interact with object '"+id+"': no such object exists.");
+		}
+	};
+	var _logPush = function(id) {
 		_htmlToNodes(LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_log);
-		_this.logPushNoBreak(id,true);
-	});
-	_defineMethod("logPushNoBreak",function(id,keepLastInView) {
+		_logPushNoBreak(id,true);
+	};
+	var _logPushNoBreak = function(id,keepLastInView) {
 		var lastElement = _log.children.length > 0 ? _log.children[_log.children.length - 1] : null;
 		_htmlToNodes(LocalizationMap.getString(id),_log);
 		if (lastElement !== null) {
@@ -1442,7 +1545,15 @@ var Engine = new (function() {
 			}
 			_log.scrollTop = refElement.offsetTop;
 		}
-	});
+	};
+
+	var _htmlToNodes = function(html,container) {
+		var root = document.createElement("div");
+		root.innerHTML = html;
+		while (root.childNodes.length > 0) {
+			container.appendChild(root.childNodes[0]);
+		}
+	};
 
 	window.addEventListener("DOMContentLoaded",function() {
 		_container = document.getElementById("container");
@@ -1454,7 +1565,7 @@ var Engine = new (function() {
 			try {
 				_parseObjects();
 				_parseRooms();
-				//_parseGraph();
+				_parseGraph();
 			} catch (e) {
 				manager.error(e,null);
 				good = false;
@@ -1469,7 +1580,7 @@ var Engine = new (function() {
 				_quests = document.getElementById(_this.Consts.html.page.QUESTS);
 
 				_log.textContent = "";
-				_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
+				_logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
 				_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
 				_actions.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
 				_quests.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
@@ -1505,6 +1616,9 @@ var Engine = new (function() {
 		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 		_wrapCallback(req3,manager,function(res) {
 			_state = _parseState(new COM.Map(res.text).globalNode,"global");
+			if (!_state.hasVariable(_this.Consts.definition.STATE_LOCATION)) {
+				throw new Error("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.");
+			}
 		});
 		var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 		req4.data = {
