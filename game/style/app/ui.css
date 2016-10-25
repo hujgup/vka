@@ -1,14 +1,14 @@
-#imageContainer {
+.log-container {
+	font-family:Courier,"Courier New",monospace;
+	font-weight:bold;
+}
+.image-container {
 	padding:1em;	
 }
-#inventory {
-	border-top:1px solid #e4e4e4;	
+.inventory, .actions {
 	padding:0 1em;
 }
-#actions {
-	padding:0 1em;
-}
-#quests {
+.quests {
 	border-left:1px solid #e4e4e4;
 	border-top:1px solid #e4e4e4;
 	padding:0 1em;
@@ -21,8 +21,4 @@
 .section-title {
 	font-weight:bold;
 	font-size:1.5em;
-}
-.log-container {
-	font-family:Courier,"Courier New",monospace;
-	font-weight:bold;
 }

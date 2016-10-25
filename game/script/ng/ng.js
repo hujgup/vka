@@ -98,9 +98,16 @@ var Engine = new (function() {
 				var _this4 = this;
 				this.BREAK = _this2.CONFIG_ENGINE_PREFIX+"break";
 				this.INITIAL = _this2.CONFIG_ENGINE_PREFIX+"init";
+				this.TITLE_PAGE = _this2.CONFIG_ENGINE_PREFIX+"title";
 				this.TITLE_INV = _this2.CONFIG_ENGINE_PREFIX+"inventoryTitle";
 				this.TITLE_ACTS = _this2.CONFIG_ENGINE_PREFIX+"actionsTitle";
 				this.TITLE_QUESTS = _this2.CONFIG_ENGINE_PREFIX+"questLogTitle";
+				this.INV_ADD = _this2.CONFIG_ENGINE_PREFIX+"inventoryAdd";
+				this.INV_REMOVE = _this2.CONFIG_ENGINE_PREFIX+"inventoryRemove";
+				this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"actionMove";
+				this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"actionExamine";
+				this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"actionInteract";
+				this.QUEST_LOG_EMPTY = _this2.CONFIG_ENGINE_PREFIX+"questLogEmpty";
 			})();
 		})();
 		this.definition = new(function() {
@@ -1394,6 +1401,11 @@ var Engine = new (function() {
 			}
 		});
 	};
+	var _verifyStringExists = function(id) {
+		if (!LocalizationMap.hasString(id)) {
+			throw new Error("Localization missing required association '"+id+"'.");
+		}
+	};
 	var _loadStylesheet = function(file) {
 		var link = document.createElement(_this.Consts.html.TAG_LINK);
 			link.setAttribute(_this.Consts.html.ATTR_REL,"stylesheet");
@@ -1579,6 +1591,7 @@ var Engine = new (function() {
 				_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
 				_quests = document.getElementById(_this.Consts.html.page.QUESTS);
 
+				document.title = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_PAGE);
 				_log.textContent = "";
 				_logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
 				_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
@@ -1611,7 +1624,18 @@ var Engine = new (function() {
 		};
 		_wrapCallback(req2,manager,function(res) {
 			_parseLocalization(new COM.Map(res.text));
-			
+			_verifyStringExists(_this.Consts.localization.configKeys.BREAK);
+			_verifyStringExists(_this.Consts.localization.configKeys.INITIAL);
+			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_PAGE);
+			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_INV);
+			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_ACTIONS);
+			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_QUESTS);
+			_verifyStringExists(_this.Consts.localization.configKeys.INV_ADD);
+			_verifyStringExists(_this.Consts.localization.configKeys.INV_REMOVE);
+			_verifyStringExists(_this.Consts.localization.configKeys.ACTION_MOVE);
+			_verifyStringExists(_this.Consts.localization.configKeys.ACTION_EXAMINE);
+			_verifyStringExists(_this.Consts.localization.configKeys.ACTION_INTERACT);
+			_verifyStringExists(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
 		});
 		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 		_wrapCallback(req3,manager,function(res) {

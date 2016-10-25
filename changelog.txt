@@ -2,6 +2,11 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.3.0
+* Modified U.I. so that the space allocated to an image is dynamic.
+* Allowed page title to be set in localization files.
+* Now enforcing that engine-defined localization strings are present.
+
 ## v0.2.2.0
 * Defined all execution statements.
 
