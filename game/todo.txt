@@ -7,22 +7,3 @@ Confirm button appears
 Click confirm button
 On move action happens
 
-common/ng files: Make them all directories (except state.cfg) so that users can split files if they get too long or w/e
-
-Math operations:
-Expandable:
-@ADD {
-	@vars {
-		cards
-	}
-	@literals {
-		2
-	}
-	@out = cards
-}
-Non-expandable:
-@LN {
-	@var = cards
-	## @literal = 4
-	@out = cards
-}

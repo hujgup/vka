@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.4.0
+* Made engine-defined cfg child contents strict (i.e. will throw exceptions if it finds something unexpected).
+
 ## v0.2.3.0
 * Modified U.I. so that the space allocated to an image is dynamic.
 * Allowed page title to be set in localization files.

@@ -565,6 +565,63 @@ var Engine = new (function() {
 				callback(_commands[i]);
 			}
 		};
+		this.enforceNoEntries = function(node) {
+			if (node.entriesLength > 0) {
+				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 entries, was "+node.entriesLength+".");
+			}
+		};
+		this.enforceNoAssociations = function(node) {
+			if (node.associationsLength > 0) {
+				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 associations, was "+node.associationsLength+".");
+			}
+		};
+		this.enforceNoChildren = function(node) {
+			if (node.childrenLength > 0) {
+				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 children, was "+node.childrenLength+".");
+			}
+		};
+		this.enforceAtLeastOneEntry = function(node) {
+			if (node.entriesLength < 1) {
+				throw new Error("Node '"+node.name.rawString+"' format error: expected at least 1 entry, was "+node.entriesLength+".");
+			}
+		};
+		this.enforceAtLeastOneChild = function(node) {
+			if (node.childrenLength < 1) {
+				throw new Error("Node '"+node.name.rawString+"' format error: expected at least 1 child, was "+node.childrenLength+".");
+			}
+		};
+		this.enforceOnlyTheseAssociations = function(node,whitelist) {
+			var notSeen = whitelist.split(0);
+			node.associations.forEach(function(key) {
+				if (whitelist.indexOf(key) === -1) {
+					throw new Error("Node '"+node.name.rawString+"' format error: association '"+key+"' not permitted in this context.");
+				} else {
+					notSeen.splice(notSeen.indexOf(key),1);
+				}
+			});
+			if (notSeen.length > 0) {
+				throw new Error("Node '"+node.name.rawString+"' format error: missing required association(s) ["+notSeen.join()+"].");
+			}
+		};
+		this.enforceOnlyTheseChildren = function(node,whitelist) {
+			var notSeen = whitelist.split(0);
+			node.children.forEach(function(child) {
+				if (whitelist.indexOf(key)
+			});
+			if (notSeen.length > 0) {
+				throw new Error("Node '"+node.name.rawString+"' format error: missing required child(ren) ["+notSeen.join()+"].");
+			}
+		};
+		this.enforceOnlyOneOfTheseChildren = function(node,whitelist) {
+			var seen = [];
+			node.children.forEach(function(child) {
+				if (seen.indexOf(child.name.rawString) !== -1) {
+					seen.push(child.name.rawString);
+				} else {
+					throw new Error("Node '"+node.name.rawString+"' format error: duplicate child '"+child.name.rawString+"'.");
+				}
+			});
+		};
 		this.execute = function(context) {
 			context = typeof context !== "undefined" ? context : {
 				stack: new EngineCommand.ScopeStack(_state),
@@ -627,6 +684,8 @@ var Engine = new (function() {
 			}
 		};
 		if (typeof node !== "undefined") {
+			this.enforceNoEntries(node);
+			this.enforceNoAssociations(node);
 			var cmd;
 			node.children.forEach(function(child) {
 				var name = child.name.rawString;
@@ -700,6 +759,8 @@ var Engine = new (function() {
 				context.setVariable(entry[0],entry[1]);
 			});
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoChildren(node);
 		node.associations.forEach(function(key,value) {
 			assocs.push([key,_parseVarValue(value)]);
 		});
@@ -712,6 +773,9 @@ var Engine = new (function() {
 		this.execute = function(context) {
 			_teleportPlayer(_to);
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoChildren(node);
+		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_MOVE_TO]);
 		_to = node.getAssociation(_this.Consts.execution.ACTION_MOVE_TO);
 		if (typeof _to !== "undefined") {
 			_to = _to.rawString;
@@ -727,6 +791,9 @@ var Engine = new (function() {
 		this.examine = function(context) {
 			_examineObject(_object,context.logBroken);
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoChildren(node);
+		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_EXAMINE_OBJECT]);
 		_object = node.getAssociation(_this.Consts.execution.ACTION_EXAMINE_OBJECT);
 		if (typeof _object !== "undefined") {
 			_object = _object.rawString;
@@ -742,6 +809,9 @@ var Engine = new (function() {
 		this.examine = function(context) {
 			_interactWithObject(_object,context);
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoChildren(node);
+		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_INTERACT_OBJECT]);
 		_object = node.getAssociation(_this.Consts.execution.ACTION_INTERACT_OBJECT);
 		if (typeof _object !== "undefined") {
 			_object = _object.rawString;
@@ -766,6 +836,9 @@ var Engine = new (function() {
 				_log(context,id);
 			});
 		};
+		this.enforceNoAssociations(node);
+		this.enforceNoChildren(node);
+		this.enforceAtLeastOneEntry(node);
 		node.entries.forEach = function(entry) {
 			_strings.push(entry.rawString);
 		};
@@ -774,9 +847,9 @@ var Engine = new (function() {
 	LogCommand.prototype.constructor = LogCommand;
 	var IfCommand = function(node) {
 		EngineCommand.call(this);
-		var _limit = new AndCommand(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
-		var _then = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
-		var _else = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
+		var _limit;
+		var _then;
+		var _else;
 		this.execute = function(context) {
 			if (_limit.execute(context)) {
 				_then.execute(context);
@@ -784,6 +857,14 @@ var Engine = new (function() {
 				_else.execute(context);
 			}
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoAssociations(node);
+		var allowedChildren = [_this.Consts.execution.FLOW_CONDITION,_this.Consts.execution.FLOW_THEN,_this.Consts.execution.FLOW_ELSE];
+		this.enforceOnlyTheseChildren(node,allowedChildren);
+		this.enforceOnlyOneOfTheseChildren(node,allowedChildren);
+		var _limit = new AndCommand(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
+		var _then = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
+		var _else = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
 	};
 	IfCommand.prototype = EngineCommand.prototype;
 	IfCommand.prototype.constructor = IfCommand;
@@ -817,6 +898,8 @@ var Engine = new (function() {
 			}
 		};
 		var _thisExec = this.execute;
+		this.enforceNoEntries(node);
+		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.OP_OUTPUT]);
 		node.children.forEach(function(child) {
 			var name = child.name.rawString;
 			var cmd;
@@ -834,9 +917,6 @@ var Engine = new (function() {
 			_this2.push(cmd);
 		});
 		_out = node.getAssociation(_this.Consts.execution.OP_OUTPUT).rawString;
-		if (typeof out === "undefined") {
-			throw new Error("Math operation output variable undefined.");
-		}
 	};
 	MathCommand.prototype = EngineCommand.prototype;
 	MathCommand.prototype.constructor = MathCommand;
@@ -1022,6 +1102,8 @@ var Engine = new (function() {
 			return values;
 		};
 		var _thisExec = this.execute;
+		this.enforceNoEntries(node);
+		this.enforceNoAssociations(node);
 		node.children.forEach(function(child) {
 			var name = child.name.rawString;
 			var cmd;
@@ -1052,6 +1134,8 @@ var Engine = new (function() {
 			}
 			return res;
 		};
+		this.enforceNoAssociations(node);
+		this.enforceNoChildren(node);
 		node.entries.forEach(function(entry) {
 			_vars.push(entry.rawString);
 		});
@@ -1065,6 +1149,8 @@ var Engine = new (function() {
 		this.execute = function(context) {
 			return _literals;
 		};
+		this.enforceNoAssociations(node);
+		this.enforceNoChildren(node);
 		node.entries.forEach(function(entry) {
 			_literals.push(_parseVarValue(entry.rawString));
 		});
@@ -1087,6 +1173,8 @@ var Engine = new (function() {
 			});
 			return trueCount;
 		};
+		this.enforceNoEntries(node);
+		this.enforceNoAssociations(node);
 		node.children.forEach(function(child) {
 			var name = child.name.rawString;
 			var cmd;
