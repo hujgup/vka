@@ -1,3 +1,40 @@
+/*
+Ctrl+F headings:
+
+[ENGINE ERROR]
+[ELEMENT ID]
+[CONSTS]
+[UTIL FUNCTIONS]
+[SCOPE]
+[MANAGER]
+[LOCALIZATION]
+[COMMANDS - ROOT]
+[COMMANDS - SCOPE STACK]
+[COMMANDS - SCOPING]
+[COMMANDS - SET VAR]
+[COMMANDS - ACTIONS]
+[COMMANDS - LOG]
+[COMMANDS - IF]
+[COMMANDS - MATH BASE]
+[COMMANDS - MATH BASIC OPS]
+[COMMANDS - MATH FUNCTIONS BASE]
+[COMMANDS - MATH FUNCTIONS]
+[COMMANDS - COMPARISON BASE]
+[COMMANDS - GETTERS]
+[COMMANDS - COMPARISON FUNCTIONS]
+[COMMANDS - LIMITS]
+[COMMANDS - LIMIT LOGIC]
+[NG OBJECT REFERENCES]
+[VARS]
+[ACTIONS]
+[LOAD ASSISTORS]
+[INIT]
+[MAIN]
+[LOADING]
+*/
+
+// [ENGINE ERROR]
+// Custom error object. "cause" is the value that caused the error, "configStack" is the .cfg element stack the error occured in (if any).
 function EngineError(message,cause,configStack) {
 	this.name = "EngineError";
 	this.message = message;
@@ -15,6 +52,8 @@ EngineError.prototype.constructor = EngineError;
 var Engine = new (function() {
 	var _this = this;
 
+	// [ELEMENT ID]
+	// Localization markup element. Stores data about how to translate between localization markup and HTML.
 	var ElementId = function(id,ele,selfClosing,className,argsApplier) {
 		var _hasClassName = typeof className !== "undefined";
 		var _className = className;
@@ -48,6 +87,8 @@ var Engine = new (function() {
 		};
 	};
 
+	// [CONSTS]
+	// Const values (strings and ElementIds).
 	this.Consts = new (function() {
 		var _this2 = this;
 		this.CONFIG_ENGINE_PREFIX = "@";
@@ -236,6 +277,8 @@ var Engine = new (function() {
 	];
 	this.Consts = Object.freeze(this.Consts);
 
+	// [UTIL FUNCTIONS]
+	// Functions that translate data (e.g. innerHTML -> raw text).
 	var _parseVarValue = function(str) {
 		var res = str;
 		if (typeof str === "string") {
@@ -252,7 +295,26 @@ var Engine = new (function() {
 		div.innerHTML = str;
 		return div.textContent;
 	};
+	var _parseBool = function(str) {
+		str = str.toLowerCase();
+		if (str === "true") {
+			return true;
+		} else if (str === "false") {
+			return false;
+		} else {
+			throw new EngineError("Cannot convert value \""+str+"\" to a Boolean.",this);
+		}
+	};
+	var _htmlToNodes = function(html,container) {
+		var root = document.createElement("div");
+		root.innerHTML = html;
+		while (root.childNodes.length > 0) {
+			container.appendChild(root.childNodes[0]);
+		}
+	};
 
+	// [SCOPE]
+	// State scope object. Controls access to state variables.
 	var Scope = function(name) {
 		var _this2 = this;
 		var _vars = {};
@@ -398,6 +460,8 @@ var Engine = new (function() {
 		});
 	};
 
+	// [MAGANER]
+	// Load manager object. Controls the display of load percentages and errors, as well as what to do when loading is done.
 	var LoadCounter = function(max,container) {
 		var _loaded = 0;
 		var _max = max;
@@ -454,6 +518,8 @@ var Engine = new (function() {
 		_render();
 	};
 
+	// [LOCALIZATION]
+	// Map for getting and setting localized string values by ID.
 	var LocalizationMap = new (function() {
 		var _this2 = this;
 
@@ -580,6 +646,8 @@ var Engine = new (function() {
 		});
 	})();
 
+	// [COMMANDS - ROOT]
+	// Engine command root object. Controls adding child commands, exception wrapping, enforcing conditions on nodes, and execution.
 	var EngineCommand = function(parent,node) {
 		var _this2 = this;
 		var _commands = [];
@@ -769,6 +837,8 @@ var Engine = new (function() {
 			});
 		}
 	};
+	// [COMMANDS - SCOPE STACK]
+	// Controls the state scoping stack.
 	EngineCommand.ScopeStack = function(root) {
 		var _stack = [root];
 		this.peek = function() {
@@ -783,8 +853,9 @@ var Engine = new (function() {
 	};
 	EngineCommand.NO_OP = new EngineCommand(null);
 	EngineCommand.prototype.constructor = EngineCommand;
+	// [COMMANDS - SCOPING]
+	// Controls moving the scoping stack into a child scope.
 	var ScopingCommand = function(parent,node) {
-		// SAVE POINT: Check if this works
 		parent.prototype.constructor.call(this,parent,node);
 		var _this2 = this;
 		var _parentExec = this.internalExecute;
@@ -802,6 +873,8 @@ var Engine = new (function() {
 	};
 	ScopingCommand.prototype = EngineCommand;
 	ScopingCommand.prototype.constructor = ScopingCommand;
+	// [COMMANDS - SET VAR]
+	// Controls updating the value of a state variable.
 	var SetVarCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -825,6 +898,8 @@ var Engine = new (function() {
 	};
 	SetVarCommand.prototype = EngineCommand.prototype;
 	SetVarCommand.prototype.constructor = SetVarCommand;
+	// [COMMANDS - ACTIONS]
+	// Commands that involve player-doable actions.
 	var MoveCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _to;
@@ -890,6 +965,7 @@ var Engine = new (function() {
 	};
 	InteractCommand.prototype = EngineCommand.prototype;
 	InteractCommand.prototype.constructor = InteractCommand;
+	// [COMMANDS - LOG]
 	var LogCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -918,6 +994,8 @@ var Engine = new (function() {
 	};
 	LogCommand.prototype = EngineCommand.prototype;
 	LogCommand.prototype.constructor = LogCommand;
+	// [COMMANDS - IF]
+	// Controls conditional branching.
 	var IfCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -945,6 +1023,8 @@ var Engine = new (function() {
 	};
 	IfCommand.prototype = EngineCommand.prototype;
 	IfCommand.prototype.constructor = IfCommand;
+	// [COMMANDS - MATH BASE]
+	// Controls how mathematical operations work.
 	var MathCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -997,6 +1077,8 @@ var Engine = new (function() {
 	};
 	MathCommand.prototype = EngineCommand.prototype;
 	MathCommand.prototype.constructor = MathCommand;
+	// [COMMANDS - MATH BASIC OPS]
+	// Controls basic arithmetic operations.
 	var MathAddCommand = function(parent,node) {
 		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
@@ -1045,6 +1127,8 @@ var Engine = new (function() {
 	};
 	MathExpCommand.prototype = MathCommand.prototype;
 	MathExpCommand.prototype.constructor = MathExpCommand;
+	// [COMMANDS - MATH FUNCTIONS BASE]
+	// Base object for single-input math functions.
 	var MathSingleCommand = function(parent,node) {
 		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
@@ -1053,6 +1137,8 @@ var Engine = new (function() {
 	};
 	MathSingleCommand.prototype = MathCommand.prototype;
 	MathSingleCommand.prototype.constructor = MathSingleCommand;
+	// [COMMANDS - MATH FUNCTIONS]
+	// Controls functional/complex arithmetic operations.
 	var MathLnCommand = function(parent,node) {
 		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
@@ -1109,6 +1195,8 @@ var Engine = new (function() {
 	};
 	MathTruncateCommand.prototype = MathSingleCommand.prototype;
 	MathTruncateCommand.prototype.constructor = MathTruncateCommand;
+	// [COMMANDS - COMPARISON BASE]
+	// Controls the comparing of values.
 	var ComparisonCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -1160,6 +1248,8 @@ var Engine = new (function() {
 	};
 	ComparisonCommand.prototype = EngineCommand.prototype;
 	ComparisonCommand.prototype.constructor = ComparisonCommand;
+	// [COMMANDS - GETTERS]
+	// Controls getting the values in variables or literals.
 	var ComparisonVarsCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -1200,6 +1290,8 @@ var Engine = new (function() {
 	};
 	ComparisonLiteralsCommand.prototype = EngineCommand.prototype;
 	ComparisonLiteralsCommand.prototype.constructor = ComparisonLiteralsCommand;
+	// [COMMANDS - COMPARISON FUNCTIONS]
+	// Controls basic value comparison.
 	var EqualsCommand = function(parent,node) {
 		ComparisonCommand.call(this,parent,node);
 		this.execCallback = function(cmp,value) {
@@ -1248,6 +1340,8 @@ var Engine = new (function() {
 	};
 	GreaterThanOrEqualToCommand.prototype = ComparisonCommand.prototype;
 	GreaterThanOrEqualToCommand.prototype.constructor = GreaterThanOrEqualToCommand;
+	// [COMMANDS - LIMITS]
+	// Base class for objects that may return true or false.
 	var LimitCommand = function(parent,node) {
 		EngineCommand.call(this,parent);
 		var _this2 = this;
@@ -1329,6 +1423,8 @@ var Engine = new (function() {
 	};
 	LimitCommand.prototype = EngineCommand.prototype;
 	LimitCommand.prototype.constructor = LimitCommand;
+	// [COMMANDS - LIMIT LOGIC]
+	// Limits that emulate basic logical operations.
 	var AndCommand = function(parent,node) {
 		LimitCommand.call(this,parent,node);
 		this.internalExecute = function(context) {
@@ -1388,6 +1484,8 @@ var Engine = new (function() {
 	MutexCommand.prototype = LimitCommand.prototype;
 	MutexCommand.prototype.constructor = MutexCommand;
 
+	// [NG OBJECT REFERENCES]
+	// Objects that wrap data read from .cfg files.
 	var ImageReference = function(id,node) {
 		if (typeof id !== "undefined") {
 			this.id = id;
@@ -1468,6 +1566,8 @@ var Engine = new (function() {
 		this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
 	};
 
+	// [VARS]
+	// Variables containing data that everyone needs to know about.
 	// CFG
 	var _roomsMap;
 	var _objectsMap;
@@ -1493,16 +1593,66 @@ var Engine = new (function() {
 	var _actions;
 	var _quests;
 
-	var _parseBool = function(str) {
-		str = str.toLowerCase();
-		if (str === "true") {
-			return true;
-		} else if (str === "false") {
-			return false;
+	// [ACTIONS]
+	// Fuctions that change the state of the game.
+	var _teleportPlayer = function(to) {
+		if (_rooms.hasOwnProperty(to)) {
+			_state.setVariable(_this.Consts.definition.STATE_LOCATION,to);
 		} else {
-			throw new EngineError("Cannot convert value \""+str+"\" to a Boolean.",this);
+			throw new EngineError("Unable to move to room '"+to+"': no such room exists.",this);
 		}
 	};
+	var _examineObject = function(id,breakFirst) {
+		breakFirst = typeof breakFirst !== "undefined" ? breakFirst : false;
+		if (_objects.hasOwnProperty(id)) {
+			var obj = _objects[id];
+			if (breakFirst) {
+				_logPush(obj.desc);
+			} else {
+				_logPushNoBreak(obj.desc);
+			}
+		} else {
+			throw new EngineError("Unable to examine object '"+id+"': no such object exists.",this);
+		}
+	};
+	var _interactWithObject = function(id,context) {
+		if (_objects.hasOwnProperty(id)) {
+			var obj = _objects[id];
+			if (obj.interactable) {
+				obj.onInteract(context);
+			} else {
+				throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",this);
+			}
+		} else {
+			throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",this);
+		}
+	};
+	var _logPush = function(id) {
+		_htmlToNodes(LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_log);
+		_logPushNoBreak(id,true);
+	};
+	var _logPushNoBreak = function(id,keepLastInView) {
+		var lastElement = _log.children.length > 0 ? _log.children[_log.children.length - 1] : null;
+		_htmlToNodes(LocalizationMap.getString(id),_log);
+		if (lastElement !== null) {
+			keepLastInView = typeof keepLastInView !== "undefined" ? keepLastInView : false;
+			var refElement;
+			if (keepLastInView) {
+				refElement = lastElement;
+			} else {
+				var nextElement = lastElement.nextElementSibling;
+				if (nextElement !== null) {
+					refElement = nextElement;
+				} else {
+					refElement = lastElement;
+				}
+			}
+			_log.scrollTop = refElement.offsetTop;
+		}
+	};
+
+	// [LOAD ASSISTORS]
+	// Functions that assist in loading.
 	var _wrapCallback = function(req,manager,callback) {
 		req.execute(function(res) {
 			if (res.error) {
@@ -1637,76 +1787,16 @@ var Engine = new (function() {
 		}
 	};
 
-	var _teleportPlayer = function(to) {
-		if (_rooms.hasOwnProperty(to)) {
-			_state.setVariable(_this.Consts.definition.STATE_LOCATION,to);
-		} else {
-			throw new EngineError("Unable to move to room '"+to+"': no such room exists.",this);
-		}
-	};
-	var _examineObject = function(id,breakFirst) {
-		breakFirst = typeof breakFirst !== "undefined" ? breakFirst : false;
-		if (_objects.hasOwnProperty(id)) {
-			var obj = _objects[id];
-			if (breakFirst) {
-				_logPush(obj.desc);
-			} else {
-				_logPushNoBreak(obj.desc);
-			}
-		} else {
-			throw new EngineError("Unable to examine object '"+id+"': no such object exists.",this);
-		}
-	};
-	var _interactWithObject = function(id,context) {
-		if (_objects.hasOwnProperty(id)) {
-			var obj = _objects[id];
-			if (obj.interactable) {
-				obj.onInteract(context);
-			} else {
-				throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",this);
-			}
-		} else {
-			throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",this);
-		}
-	};
-	var _logPush = function(id) {
-		_htmlToNodes(LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_log);
-		_logPushNoBreak(id,true);
-	};
-	var _logPushNoBreak = function(id,keepLastInView) {
-		var lastElement = _log.children.length > 0 ? _log.children[_log.children.length - 1] : null;
-		_htmlToNodes(LocalizationMap.getString(id),_log);
-		if (lastElement !== null) {
-			keepLastInView = typeof keepLastInView !== "undefined" ? keepLastInView : false;
-			var refElement;
-			if (keepLastInView) {
-				refElement = lastElement;
-			} else {
-				var nextElement = lastElement.nextElementSibling;
-				if (nextElement !== null) {
-					refElement = nextElement;
-				} else {
-					refElement = lastElement;
-				}
-			}
-			_log.scrollTop = refElement.offsetTop;
-		}
-	};
-
-	var _htmlToNodes = function(html,container) {
-		var root = document.createElement("div");
-		root.innerHTML = html;
-		while (root.childNodes.length > 0) {
-			container.appendChild(root.childNodes[0]);
-		}
-	};
-
+	// [INIT]
+	// Program entry point.
 	window.addEventListener("DOMContentLoaded",function() {
 		_container = document.getElementById("container");
 		_containerContent = _container.innerHTML;
 
 		var manager = new LoadCounter(7,_container);
 		manager.onLoad = function() {
+			// [MAIN]
+			// Sets up the initial state and prepares for possible user input.
 			var good = true;
 			try {
 				_parseObjects();
@@ -1752,6 +1842,8 @@ var Engine = new (function() {
 			query = {};
 		}
 
+		// [LOADING]
+		// AJAX requests that load data from files.
 		var req = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_STYLING);
 		_wrapCallback(req,manager,function(res) {
 			var json = JSON.parse(res.text);

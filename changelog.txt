@@ -2,6 +2,10 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.4.2
+* Organized how ng.js is laid out.
+* Added headings to ng.js sections.
+
 ## v0.2.4.1
 * Fixed lots of bugs with execution statements.
 * Fixed image size being too large when no image is specified.

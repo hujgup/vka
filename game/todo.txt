@@ -1,5 +1,3 @@
-Put in headings in ng.js and define them at the top of the file in a comment.
-
 For each instance of .rawString in ng.js, verify that I don't actually want .unescapedString
 
 Wrap image element in an a tag, set up linking, and update ng.js so that this works.
