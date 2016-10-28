@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.4.3
+* Removed game/common/app/worlds.cfg and moved contents into a comment in game.common/ng/state.cfg.
+
 ## v0.2.4.2
 * Organized how ng.js is laid out.
 * Added headings to ng.js sections.
