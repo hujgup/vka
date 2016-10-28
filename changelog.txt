@@ -2,6 +2,12 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.4.1
+* Fixed lots of bugs with execution statements.
+* Fixed image size being too large when no image is specified.
+* Made some of the sub-command overload protocols more sane.
+* Fixed gfx user directory being named wrong.
+
 ## v0.2.4.0
 * Made engine-defined cfg child contents strict (i.e. will throw exceptions if it finds something unexpected).
 

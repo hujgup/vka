@@ -1,3 +1,9 @@
+Put in headings in ng.js and define them at the top of the file in a comment.
+
+For each instance of .rawString in ng.js, verify that I don't actually want .unescapedString
+
+Wrap image element in an a tag, set up linking, and update ng.js so that this works.
+
 Command structure is a set of select boxes or text input fields
 So "move to room x" would be like
 Menu 1 -> Select "Move"

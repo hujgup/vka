@@ -231,3 +231,6 @@ html, body {
 .fit {
 	width:100%;
 }
+.image-container {
+	position:relative;
+}

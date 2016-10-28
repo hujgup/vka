@@ -3,7 +3,10 @@
 	font-weight:bold;
 }
 .image-container {
-	padding:1em;	
+	margin:1em;
+}
+.image-container:empty {
+	display:none;
 }
 .inventory, .actions {
 	padding:0 1em;

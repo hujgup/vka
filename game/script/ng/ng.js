@@ -1,20 +1,19 @@
+function EngineError(message,cause,configStack) {
+	this.name = "EngineError";
+	this.message = message;
+	this.cause = cause; 
+	try {
+		this.stack = (new Error()).stack;
+	} catch (e) {
+		this.stack = "";
+	}
+	this.configStack = Array.isArray(configStack) ? configStack : [];
+}
+EngineError.prototype = Error.prototype;
+EngineError.prototype.constructor = EngineError;
+
 var Engine = new (function() {
 	var _this = this;
-
-	var _defineMethod = function(name,func) {
-		Object.defineProperty(_this,name,{
-			value: func,
-			writable: false,
-			enumerable: false
-		});
-	};
-	var _defineObject = function(name,func) {
-		Object.defineProperty(_this,name,{
-			value: func,
-			writable: false,
-			enumerable: false
-		});
-	};
 
 	var ElementId = function(id,ele,selfClosing,className,argsApplier) {
 		var _hasClassName = typeof className !== "undefined";
@@ -78,7 +77,7 @@ var Engine = new (function() {
 			this.EMPHASIS = "em";
 			this.LINK = "a";
 			this.WRAPPER = "div";
-			this.page = new(function() {
+			this.page = new (function() {
 				var _this4 = this;
 				this.LOG = "log";
 				this.IMAGE = "image";
@@ -87,18 +86,18 @@ var Engine = new (function() {
 				this.QUESTS = "quests";
 			})();
 		})();
-		this.localization = new(function() {
+		this.localization = new (function() {
 			var _this3 = this;
 			this.OPEN_BLOCK = "[";
 			this.CLOSE_BLOCK = "]";
 			this.BLOCK_OPEN_PREFIX = "+";
 			this.BLOCK_CLOSE_PREFIX = "/";
 			this.BLOCK_ARGS_SEPARATOR = " ";
-			this.configKeys = new(function() {
+			this.configKeys = new (function() {
 				var _this4 = this;
 				this.BREAK = _this2.CONFIG_ENGINE_PREFIX+"break";
 				this.INITIAL = _this2.CONFIG_ENGINE_PREFIX+"init";
-				this.TITLE_PAGE = _this2.CONFIG_ENGINE_PREFIX+"title";
+				this.TITLE_PAGE = _this2.CONFIG_ENGINE_PREFIX+"pageTitle";
 				this.TITLE_INV = _this2.CONFIG_ENGINE_PREFIX+"inventoryTitle";
 				this.TITLE_ACTS = _this2.CONFIG_ENGINE_PREFIX+"actionsTitle";
 				this.TITLE_QUESTS = _this2.CONFIG_ENGINE_PREFIX+"questLogTitle";
@@ -108,9 +107,10 @@ var Engine = new (function() {
 				this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"actionExamine";
 				this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"actionInteract";
 				this.QUEST_LOG_EMPTY = _this2.CONFIG_ENGINE_PREFIX+"questLogEmpty";
+				this.IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"imageSource";
 			})();
 		})();
-		this.definition = new(function() {
+		this.definition = new (function() {
 			var _this3 = this;
 			this.NAME = _this2.CONFIG_ENGINE_PREFIX+"name";
 			this.DESC = _this2.CONFIG_ENGINE_PREFIX+"desc";
@@ -127,7 +127,7 @@ var Engine = new (function() {
 			this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
 			this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
 		})();
-		this.execution = new(function() {
+		this.execution = new (function() {
 			var _this3 = this;
 			this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"teleport";
 			this.ACTION_MOVE_TO = _this2.CONFIG_ENGINE_PREFIX+"to";
@@ -180,12 +180,12 @@ var Engine = new (function() {
 			this.REGEX_BOOLEAN = /^(true|false)$/;
 			this.BOOL_TRUE = "true";
 		})();
-		this.io = new(function() {
+		this.io = new (function() {
 			var _this3 = this;
 			this.USER_ID = "app";
 			this.ENGINE_ID = "ng";
 			this.CONFIG_EXT = ".cfg";
-			this.paths = new(function() {
+			this.paths = new (function() {
 				var _this4 = this;
 				this.SCRIPT_ROOT = "script/";
 				this.SCRIPT_USER = _this4.SCRIPT_ROOT+_this3.USER_ID+"/";
@@ -204,16 +204,15 @@ var Engine = new (function() {
 				this.GFX_USER = _this4.GFX_ROOT+_this3.USER_ID+"/";
 				this.GFX_ENGINE = _this4.GFX_ROOT+_this3.ENGINE_ID+"/";
 			})();
-			this.files = new(function() {
+			this.files = new (function() {
 				var _this4 = this;
 				this.SCRIPT_LOAD_STYLING = _this3.paths.SCRIPT_IO+"loadStyling.php";
 				this.SCRIPT_LOAD_LOCALIZATION = _this3.paths.SCRIPT_IO+"loadLocalization.php";
 				this.SCRIPT_LOAD_MISC = _this3.paths.SCRIPT_IO+"loadNg.php";
 				this.COMMON_STATE = _this3.paths.COMMON_ENGINE+"state"+_this3.CONFIG_EXT;
-				this.GFX_ALPHA = _this3.paths.GFX_ENGINE+"alpha.png";
 			})();
 		})();
-	});
+	})();
 	this.Consts.localization.ID_MAP = [
 		new ElementId("s",_this.Consts.html.INLINE_WRAPPER),
 		new ElementId("n",_this.Consts.html.LINE_BREAK,true),
@@ -225,7 +224,7 @@ var Engine = new (function() {
 		new ElementId("l",_this.Consts.html.LINK,false,undefined,function(args,hasClassName,className,standardApplier) {
 			args = args.split(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
 			if (args.length === 0) {
-				throw new Error("l element in localization must have one argument specifying the URL to link to.");
+				throw new EngineError("l element in localization must have one argument specifying the URL to link to.",this);
 			} else {
 				var res = " "+_this.Consts.html.TARGET_FULL+" "+_this.Consts.html.HREF_OPEN+args[0]+_this.Consts.html.ATTR_CLOSE;
 				args = args.slice(1).join(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
@@ -238,12 +237,20 @@ var Engine = new (function() {
 	this.Consts = Object.freeze(this.Consts);
 
 	var _parseVarValue = function(str) {
-		if (_this.Consts.execution.REGEX_NUMBER.test(res)) {
-			res = parseFloat(res);
-		} else if (_this.Consts.execution.REGEX_BOOLEAN.test(res)) {
-			res = res === _this.Consts.execution.BOOL_TRUE;
+		var res = str;
+		if (typeof str === "string") {
+			if (_this.Consts.execution.REGEX_NUMBER.test(res)) {
+				res = parseFloat(res);
+			} else if (_this.Consts.execution.REGEX_BOOLEAN.test(res)) {
+				res = res === _this.Consts.execution.BOOL_TRUE;
+			}
 		}
 		return res;
+	};
+	var _stripHTML = function(str) {
+		var div = document.createElement("div");
+		div.innerHTML = str;
+		return div.textContent;
 	};
 
 	var Scope = function(name) {
@@ -310,22 +317,25 @@ var Engine = new (function() {
 			return _vars[v];
 		});
 		_defineMethod("_setVar",function(v,value) {
-			_vars[v] = value;
+			_vars[v] = _parseVarValue(value);
 		});
 		_defineMethod("hasVariable",function(v) {
 			return typeof _this2.getVariable(v) !== "undefined";
 		});
 		_defineMethod("getVariable",function(v) {
 			var scope = _this2._getVarScope(v);
-			return scope !== null ? _parseVarValue(scope._getVar(v)) : undefined;
+			return scope !== null ? scope._getVar(v) : undefined;
 		});
 		_defineMethod("setVariable",function(v,value) {
 			var scope = _this2._getVarScope(v);
 			if (scope !== null) {
 				scope._setVar(v,value);
 			} else {
-				throw new Error("Variable '"+v+"' is undefined.");
+				throw new EngineError("Variable '"+v+"' is undefined.",this);
 			}
+		});
+		_defineMethod("defineVariable",function(v,value) {
+			_this2._setVar(v,value);
 		});
 		_defineMethod("hasChild",function(child,deep) {
 			deep = typeof deep !== "undefined" ? deep : false;
@@ -404,10 +414,26 @@ var Engine = new (function() {
 				}
 			}
 		};
-		this.error = function(e,cause) {
-			console.log(cause);
-			console.error(e);
-			_errors.push(" "+e.message);
+		this.error = function(e) {
+			var msg = "";
+			msg += e.name+": "+e.message+"\n"+e.stack;
+			try {
+				msg += "\nThrown because of "+e.cause;
+			} catch (e2) {
+			}
+			var stack = "";
+			if (Array.isArray(e.configStack)) {
+				e.configStack.reverse();
+				stack = e.configStack.join("/");
+				msg += "\nConfig stack: "+stack;
+			}
+			console.error(msg);
+			var toPush = " "+e.message;
+			if (stack !== "") {
+				toPush += " ("+stack+")";
+			}
+			_errors.push(toPush);
+			document.title = "Error";
 			container.textContent = "";
 			var p;
 			var span;
@@ -475,14 +501,14 @@ var Engine = new (function() {
 					id = _this.Consts.localization.ID_MAP[i];
 					if (block.id === id.id) {
 						if (ignoreSelfClosing && id.selfClosing) {
-							throw new Error(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.");
+							throw new EngineError(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.",this);
 						} else {
 							callback(id);
 							return;
 						}
 					}
 				}
-				throw new Error("Unknown "+context+" tag "+_this.Consts.localization.BLOCK_OPEN_PREFIX+block.id+" in a localization file.");
+				throw new EngineError("Unknown "+context+" tag "+_this.Consts.localization.BLOCK_OPEN_PREFIX+block.id+" in a localization file.",this);
 			};
 			value.forEach(function(c) {
 				if (inOpenBlock) {
@@ -554,9 +580,19 @@ var Engine = new (function() {
 		});
 	})();
 
-	var EngineCommand = function(node) {
+	var EngineCommand = function(parent,node) {
 		var _this2 = this;
 		var _commands = [];
+		this.parent = parent;
+		this.nodeName = null;
+		this.ngCatch = function(callback) {
+			try {
+				callback();
+			} catch (e) {
+				e.configStack.push(this.nodeName);
+				throw e;
+			}
+		};
 		this.push = function(cmd) {
 			_commands.push(cmd);
 		};
@@ -567,62 +603,68 @@ var Engine = new (function() {
 		};
 		this.enforceNoEntries = function(node) {
 			if (node.entriesLength > 0) {
-				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 entries, was "+node.entriesLength+".");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: expected exactly 0 entries, was "+node.entriesLength+".",this);
 			}
 		};
 		this.enforceNoAssociations = function(node) {
 			if (node.associationsLength > 0) {
-				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 associations, was "+node.associationsLength+".");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: expected exactly 0 associations, was "+node.associationsLength+".",this);
 			}
 		};
 		this.enforceNoChildren = function(node) {
 			if (node.childrenLength > 0) {
-				throw new Error("Node '"+node.name.rawString+"' format error: expected exactly 0 children, was "+node.childrenLength+".");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: expected exactly 0 children, was "+node.childrenLength+".",this);
 			}
 		};
 		this.enforceAtLeastOneEntry = function(node) {
 			if (node.entriesLength < 1) {
-				throw new Error("Node '"+node.name.rawString+"' format error: expected at least 1 entry, was "+node.entriesLength+".");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: expected at least 1 entry, was "+node.entriesLength+".",this);
 			}
 		};
 		this.enforceAtLeastOneChild = function(node) {
 			if (node.childrenLength < 1) {
-				throw new Error("Node '"+node.name.rawString+"' format error: expected at least 1 child, was "+node.childrenLength+".");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: expected at least 1 child, was "+node.childrenLength+".",this);
 			}
 		};
 		this.enforceOnlyTheseAssociations = function(node,whitelist) {
-			var notSeen = whitelist.split(0);
+			var notSeen = whitelist.slice(0);
 			node.associations.forEach(function(key) {
 				if (whitelist.indexOf(key) === -1) {
-					throw new Error("Node '"+node.name.rawString+"' format error: association '"+key+"' not permitted in this context.");
+					throw new EngineError("Node '"+node.name.rawString+"' format error: association '"+key+"' not permitted in this context.",this);
 				} else {
 					notSeen.splice(notSeen.indexOf(key),1);
 				}
 			});
 			if (notSeen.length > 0) {
-				throw new Error("Node '"+node.name.rawString+"' format error: missing required association(s) ["+notSeen.join()+"].");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: missing required association(s) ["+notSeen.join()+"].",this);
 			}
 		};
 		this.enforceOnlyTheseChildren = function(node,whitelist) {
-			var notSeen = whitelist.split(0);
+			var notSeen = whitelist.slice(0);
 			node.children.forEach(function(child) {
-				if (whitelist.indexOf(key)
+				if (whitelist.indexOf(child.name.rawString) === -1) {
+					throw new EngineError("Node '"+node.name.rawString+"' format error: child '"+child.name.rawString+"' not permitted in this context.",this);
+				} else {
+					notSeen.splice(notSeen.indexOf(child.name.rawString),1);
+				}
 			});
 			if (notSeen.length > 0) {
-				throw new Error("Node '"+node.name.rawString+"' format error: missing required child(ren) ["+notSeen.join()+"].");
+				throw new EngineError("Node '"+node.name.rawString+"' format error: missing required child(ren) ["+notSeen.join()+"].",this);
 			}
 		};
 		this.enforceOnlyOneOfTheseChildren = function(node,whitelist) {
 			var seen = [];
 			node.children.forEach(function(child) {
-				if (seen.indexOf(child.name.rawString) !== -1) {
+				if (whitelist.indexOf(child.name.rawString) === -1) {
+					throw new EngineError("Node '"+node.name.rawString+"' format error: child '"+child.name.rawString+"' not permitted in this context.",this);
+				} else if (seen.indexOf(child.name.rawString) === -1) {
 					seen.push(child.name.rawString);
 				} else {
-					throw new Error("Node '"+node.name.rawString+"' format error: duplicate child '"+child.name.rawString+"'.");
+					throw new EngineError("Node '"+node.name.rawString+"' format error: duplicate child '"+child.name.rawString+"'.",this);
 				}
 			});
 		};
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			context = typeof context !== "undefined" ? context : {
 				stack: new EngineCommand.ScopeStack(_state),
 				logBroken: false
@@ -631,91 +673,99 @@ var Engine = new (function() {
 				cmd.execute(context);
 			});
 		};
+		this.execute = function(context) {
+			this.ngCatch(function() {
+				_this2.internalExecute(context);
+			});
+		};
 		this.attemptMath = function(child,name) {
 			var res;
 			switch (name) {
 				case _this.Consts.execution.MATH_ADD:
-					res = new MathAddCommand(child);
+					res = new MathAddCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_SUBTRACT:
-					res = new MathSubtractCommand(child);
+					res = new MathSubtractCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_MULTIPLY:
-					res = new MathMultiplyCommand(child);
+					res = new MathMultiplyCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_DIVIDE:
-					res = new MathDivideCommand(child);
+					res = new MathDivideCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_MOD:
-					res = new MathModCommand(child);
+					res = new MathModCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_EXP:
-					res = new MathExpCommand(child);
+					res = new MathExpCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_LN:
-					res = new MathLnCommand(child);
+					res = new MathLnCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_LOG2:
-					res = new MathLog2Command(child);
+					res = new MathLog2Command(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_LOG10:
-					res = new MathLog10Command(child);
+					res = new MathLog10Command(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_ROUND:
-					res = new MathRoundCommand(child);
+					res = new MathRoundCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_FLOOR:
-					res = new MathFloorCommand(child);
+					res = new MathFloorCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_CEILING:
-					res = new MathCeilingCommand(child);
+					res = new MathCeilingCommand(_this2,child);
 					break;
 				case _this.Consts.execution.MATH_TRUNCATE:
-					res = new MathTruncateCommand(child);
+					res = new MathTruncateCommand(_this2,child);
 					break;
 			}
 			return res;
 		};
 		this.attemptScoping = function(child,name) {
 			if (name.startsWith(_this.Consts.CONFIG_ENGINE_PREFIX)) {
-				throw new Error("Unexpected engine-defined child \""+name+"\".");
+				throw new EngineError("Unexpected engine-defined child \""+name+"\".",this);
 			} else {
-				return new ScopingCommand(child,name);
+				return new ScopingCommand(_this2,child);
 			}
 		};
 		if (typeof node !== "undefined") {
-			this.enforceNoEntries(node);
-			this.enforceNoAssociations(node);
-			var cmd;
-			node.children.forEach(function(child) {
-				var name = child.name.rawString;
-				switch (name) {
-					case _this.Consts.execution.FLOW_IF:
-						cmd = new IfCommand(child);
-						break;
-					case _this.Consts.execution.STATE_SET_VAR:
-						cmd = new SetVarCommand(child);
-						break;
-					case _this.Consts.execution.ACTION_LOG:
-						cmd = new LogCommand(child);
-						break;
-					case _this.Consts.execution.ACTION_MOVE:
-						cmd = new MoveCommand(child);
-						break;
-					case _this.Consts.execution.ACTION_EXAMINE:
-						cmd = new ExamineCommand(child);
-						break;
-					case _this.Consts.execution.ACTION_INTERACT:
-						cmd = new InteractCommand(child);
-						break;
-					default:
-						cmd = _this2.attemptMath(child,name); 
-						if (typeof cmd === "undefined") {
-							cmd = _this2.attemptScoping(child,name);
-						}
-						break;
-				}
-				_this2.push(cmd);
+			this.ngCatch(function() {
+				_this2.nodeName = node.name.rawString;
+				_this2.enforceNoEntries(node);
+				_this2.enforceNoAssociations(node);
+				var cmd;
+				node.children.forEach(function(child) {
+					var name = child.name.rawString;
+					switch (name) {
+						case _this.Consts.execution.FLOW_IF:
+							cmd = new IfCommand(_this2,child);
+							break;
+						case _this.Consts.execution.STATE_SET_VAR:
+							cmd = new SetVarCommand(_this2,child);
+							break;
+						case _this.Consts.execution.ACTION_LOG:
+							cmd = new LogCommand(_this2,child);
+							break;
+						case _this.Consts.execution.ACTION_MOVE:
+							cmd = new MoveCommand(_this2,child);
+							break;
+						case _this.Consts.execution.ACTION_EXAMINE:
+							cmd = new ExamineCommand(_this2,child);
+							break;
+						case _this.Consts.execution.ACTION_INTERACT:
+							cmd = new InteractCommand(_this2,child);
+							break;
+						default:
+							cmd = _this2.attemptMath(child,name); 
+							if (typeof cmd === "undefined") {
+								cmd = _this2.attemptScoping(child,name);
+							}
+							break;
+					}
+					_this2.push(cmd);
+				});
 			});
 		}
 	};
@@ -731,98 +781,118 @@ var Engine = new (function() {
 			return _stack.pop();
 		};
 	};
-	EngineCommand.NO_OP = new EngineCommand();
+	EngineCommand.NO_OP = new EngineCommand(null);
 	EngineCommand.prototype.constructor = EngineCommand;
-	var ScopingCommand = function(node,name) {
-		EngineCommand.call(this,node);
-		var _name = name;
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var child = context.stack.peek().getChildNamed(_name);
+	var ScopingCommand = function(parent,node) {
+		// SAVE POINT: Check if this works
+		parent.prototype.constructor.call(this,parent,node);
+		var _this2 = this;
+		var _parentExec = this.internalExecute;
+		this.internalExecute = function(context) {
+			var child = context.stack.peek().getChildNamed(_this2.nodeName);
 			if (typeof child !== "undefined") {
 				context.stack.push(child);
 				var res = _parentExec(context);
 				context.stack.pop();
 				return res;
 			} else {
-				throw new Error("Scope '"+context.stack.peek().name+"' does not have a child '"+_name+"'.");
+				throw new EngineError("Scope '"+context.stack.peek().name+"' does not have a child '"+_this2.nodeName+"'.",this);
 			}
 		};
 	};
 	ScopingCommand.prototype = EngineCommand;
 	ScopingCommand.prototype.constructor = ScopingCommand;
-	var SetVarCommand = function(node) {
-		EngineCommand.call(this);
-		var assocs = [];
-		this.execute = function(context) {
-			assocs.forEach(function(entry) {
-				context.setVariable(entry[0],entry[1]);
+	var SetVarCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
+		var _assocs = [];
+		this.internalExecute = function(context) {
+			_assocs.forEach(function(entry) {
+				context.setVariable(entry.key,entry.value);
 			});
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoChildren(node);
-		node.associations.forEach(function(key,value) {
-			assocs.push([key,_parseVarValue(value)]);
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoChildren(node);
+			node.associations.forEach(function(key,value) {
+				_assocs.push({
+					key: key,
+					value: value
+				});
+			});
 		});
 	};
 	SetVarCommand.prototype = EngineCommand.prototype;
 	SetVarCommand.prototype.constructor = SetVarCommand;
-	var MoveCommand = function(node) {
-		EngineCommand.call(this);
+	var MoveCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
 		var _to;
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			_teleportPlayer(_to);
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoChildren(node);
-		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_MOVE_TO]);
-		_to = node.getAssociation(_this.Consts.execution.ACTION_MOVE_TO);
-		if (typeof _to !== "undefined") {
-			_to = _to.rawString;
-		} else {
-			throw new Error(_this.Consts.execution.ACTION_MOVE+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.");
-		}
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoChildren(node);
+			_this2.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_MOVE_TO]);
+			_to = node.getAssociation(_this.Consts.execution.ACTION_MOVE_TO);
+			if (typeof _to !== "undefined") {
+				_to = _to.rawString;
+			} else {
+				throw new EngineError(_this.Consts.execution.ACTION_MOVE+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",_this2);
+			}
+		});
 	};
 	MoveCommand.prototype = EngineCommand.prototype;
 	MoveCommand.prototype.constructor = MoveCommand;
-	var ExamineCommand = function(node) {
-		EngineCommand.call(this);
+	var ExamineCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
 		var _object;
-		this.examine = function(context) {
+		this.internalExecute = function(context) {
 			_examineObject(_object,context.logBroken);
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoChildren(node);
-		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_EXAMINE_OBJECT]);
-		_object = node.getAssociation(_this.Consts.execution.ACTION_EXAMINE_OBJECT);
-		if (typeof _object !== "undefined") {
-			_object = _object.rawString;
-		} else {
-			throw new Error(_this.Consts.execution.ACTION_EXAMINE+": Required association '"+_this.Consts.execution.ACTION_EXAMINE_OBJECT+"' is undefined.");
-		}
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoChildren(node);
+			_this2.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_EXAMINE_OBJECT]);
+			_object = node.getAssociation(_this.Consts.execution.ACTION_EXAMINE_OBJECT);
+			if (typeof _object !== "undefined") {
+				_object = _object.rawString;
+			} else {
+				throw new EngineError(_this.Consts.execution.ACTION_EXAMINE+": Required association '"+_this.Consts.execution.ACTION_EXAMINE_OBJECT+"' is undefined.",this);
+			}
+		});
 	};
 	ExamineCommand.prototype = EngineCommand.prototype;
 	ExamineCommand.prototype.constructor = ExamineCommand;
-	var InteractCommand = function(node) {
-		EngineCommand.call(this);
+	var InteractCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
 		var _object;
-		this.examine = function(context) {
+		this.internalExecute = function(context) {
 			_interactWithObject(_object,context);
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoChildren(node);
-		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_INTERACT_OBJECT]);
-		_object = node.getAssociation(_this.Consts.execution.ACTION_INTERACT_OBJECT);
-		if (typeof _object !== "undefined") {
-			_object = _object.rawString;
-		} else {
-			throw new Error(_this.Consts.execution.ACTION_INTERACT+": Required association '"+_this.Consts.execution.ACTION_INTERACT_OBJECT+"' is undefined.");
-		}
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoChildren(node);
+			_this2.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_INTERACT_OBJECT]);
+			_object = node.getAssociation(_this.Consts.execution.ACTION_INTERACT_OBJECT);
+			if (typeof _object !== "undefined") {
+				_object = _object.rawString;
+			} else {
+				throw new EngineError(_this.Consts.execution.ACTION_INTERACT+": Required association '"+_this.Consts.execution.ACTION_INTERACT_OBJECT+"' is undefined.",this);
+			}
+		});
 	};
 	InteractCommand.prototype = EngineCommand.prototype;
 	InteractCommand.prototype.constructor = InteractCommand;
-	var LogCommand = function(node) {
-		EngineCommand.call(this);
+	var LogCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
 		var _strings = [];
 		var _log = function(context,id) {
 			if (context.logBroken) {
@@ -831,55 +901,60 @@ var Engine = new (function() {
 				_logPush(id);
 			}
 		};
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			_strings.forEach(function(id) {
 				_log(context,id);
 			});
 		};
-		this.enforceNoAssociations(node);
-		this.enforceNoChildren(node);
-		this.enforceAtLeastOneEntry(node);
-		node.entries.forEach = function(entry) {
-			_strings.push(entry.rawString);
-		};
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoAssociations(node);
+			_this2.enforceNoChildren(node);
+			_this2.enforceAtLeastOneEntry(node);
+			node.entries.forEach(function(entry) {
+				_strings.push(entry.rawString);
+			});
+		});
 	};
 	LogCommand.prototype = EngineCommand.prototype;
 	LogCommand.prototype.constructor = LogCommand;
-	var IfCommand = function(node) {
-		EngineCommand.call(this);
+	var IfCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
 		var _limit;
 		var _then;
 		var _else;
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			if (_limit.execute(context)) {
 				_then.execute(context);
 			} else {
 				_else.execute(context);
 			}
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoAssociations(node);
-		var allowedChildren = [_this.Consts.execution.FLOW_CONDITION,_this.Consts.execution.FLOW_THEN,_this.Consts.execution.FLOW_ELSE];
-		this.enforceOnlyTheseChildren(node,allowedChildren);
-		this.enforceOnlyOneOfTheseChildren(node,allowedChildren);
-		var _limit = new AndCommand(node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
-		var _then = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_THEN));
-		var _else = new EngineCommand(node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoAssociations(node);
+			var allowedChildren = [_this.Consts.execution.FLOW_CONDITION,_this.Consts.execution.FLOW_THEN,_this.Consts.execution.FLOW_ELSE];
+			_this2.enforceOnlyTheseChildren(node,allowedChildren);
+			_this2.enforceOnlyOneOfTheseChildren(node,allowedChildren);
+			_limit = new AndCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
+			_then = new EngineCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_THEN));
+			_else = new EngineCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
+		});
 	};
 	IfCommand.prototype = EngineCommand.prototype;
 	IfCommand.prototype.constructor = IfCommand;
-	var MathCommand = function(node) {
-		EngineCommand.call(this);
+	var MathCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
 		var _this2 = this;
 		var _out;
 		this.initializeValue = function(value) {
 			return value;
 		};
-		this.getId = function() {
-		};
 		this.execCallback = function(current,value) {
 		};
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			var values = [];
 			var component;
 			this.forEach(function(cmd) {
@@ -894,201 +969,152 @@ var Engine = new (function() {
 				context.stack.peek().setVariable(_out,res.toString());
 				return res;
 			} else {
-				throw new Error(this.getId()+": no values to perform operation on.");
+				throw new EngineError(_this2.nodeName+": no values to perform operation on.",this);
 			}
 		};
-		var _thisExec = this.execute;
-		this.enforceNoEntries(node);
-		this.enforceOnlyTheseAssociations(node,[_this.Consts.execution.OP_OUTPUT]);
-		node.children.forEach(function(child) {
-			var name = child.name.rawString;
-			var cmd;
-			switch (name) {
-				case _this.Consts.execution.OP_VARS:
-					cmd = new ComparisonVarsCommand(child);
-					break;
-				case _this.Consts.execution.OP_LITERALS:
-					cmd = new ComparisonLiteralsCommand(child);
-					break;
-				default:
-					cmd = _this2.attemptScoping(child,name,context);
-					break;
-			}
-			_this2.push(cmd);
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceOnlyTheseAssociations(node,[_this.Consts.execution.OP_OUTPUT]);
+			node.children.forEach(function(child) {
+				var name = child.name.rawString;
+				var cmd;
+				switch (name) {
+					case _this.Consts.execution.OP_VARS:
+						cmd = new ComparisonVarsCommand(_this2,child);
+						break;
+					case _this.Consts.execution.OP_LITERALS:
+						cmd = new ComparisonLiteralsCommand(_this2,child);
+						break;
+					default:
+						cmd = _this2.attemptScoping(child,name);
+						break;
+				}
+				_this2.push(cmd);
+			});
+			_out = node.getAssociation(_this.Consts.execution.OP_OUTPUT).rawString;
 		});
-		_out = node.getAssociation(_this.Consts.execution.OP_OUTPUT).rawString;
 	};
 	MathCommand.prototype = EngineCommand.prototype;
 	MathCommand.prototype.constructor = MathCommand;
-	var MathAddCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_ADD;
-		};
+	var MathAddCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return current + value;
 		};
 	};
 	MathAddCommand.prototype = MathCommand.prototype;
 	MathAddCommand.prototype.constructor = MathAddCommand;
-	var MathSubtractCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_SUBTRACT;
+	var MathSubtractCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return current - value;
 		};
 	};
 	MathSubtractCommand.prototype = MathCommand.prototype;
 	MathSubtractCommand.prototype.constructor = MathSubtractCommand;
-	var MathMultiplyCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_MULTIPLY;
-		};
+	var MathMultiplyCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return current*value;
 		};
 	};
 	MathMultiplyCommand.prototype = MathCommand.prototype;
 	MathMultiplyCommand.prototype.constructor = MathMultiplyCommand;
-	var MathDivideCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_Divide;
-		};
+	var MathDivideCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return current/value;
 		};
 	};
 	MathDivideCommand.prototype = MathCommand.prototype;
 	MathDivideCommand.prototype.constructor = MathDivideCommand;
-	var MathModCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_MOD;
-		};
+	var MathModCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return current%value;
 		};
 	};
 	MathModCommand.prototype = MathCommand.prototype;
 	MathModCommand.prototype.constructor = MathModCommand;
-	var MathExpCommand = function(node) {
-		MathCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_EXP;
-		};
+	var MathExpCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return Math.pow(current,value);
 		};
 	};
 	MathExpCommand.prototype = MathCommand.prototype;
 	MathExpCommand.prototype.constructor = MathExpCommand;
-	var MathSingleCommand = function(node) {
-		MathCommand.call(this,node);
+	var MathSingleCommand = function(parent,node) {
+		MathCommand.call(this,parent,node);
 		this.execCallback = function(current,value) {
 			return this.initializeValue(value);
 		};
 	};
 	MathSingleCommand.prototype = MathCommand.prototype;
 	MathSingleCommand.prototype.constructor = MathSingleCommand;
-	var MathLnCommand = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_LN;
-		};
+	var MathLnCommand = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.log(value);
 		};
 	};
 	MathLnCommand.prototype = MathSingleCommand.prototype;
 	MathLnCommand.prototype.constructor = MathLnCommand;
-	var MathLog2Command = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_LOG2;
-		};
+	var MathLog2Command = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.log2(value);
 		};
 	};
 	MathLog2Command.prototype = MathSingleCommand.prototype;
 	MathLog2Command.prototype.constructor = MathLog2Command;
-	var MathLog10Command = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_LOG10;
-		};
+	var MathLog10Command = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.log10(value);
 		};
 	};
 	MathLog10Command.prototype = MathSingleCommand.prototype;
 	MathLog10Command.prototype.constructor = MathLog10Command;
-	var MathRoundCommand = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_ROUND;
-		};
+	var MathRoundCommand = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.round(value);
 		};
 	};
 	MathRoundCommand.prototype = MathSingleCommand.prototype;
 	MathRoundCommand.prototype.constructor = MathRoundCommand;
-	var MathFloorCommand = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_FLOOR;
-		};
+	var MathFloorCommand = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.floor(value);
 		};
 	};
 	MathFloorCommand.prototype = MathSingleCommand.prototype;
 	MathFloorCommand.prototype.constructor = MathFloorCommand;
-	var MathCeilingCommand = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_CEILING;
-		};
+	var MathCeilingCommand = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.ceil(value);
 		};
 	};
 	MathCeilingCommand.prototype = MathSingleCommand.prototype;
 	MathCeilingCommand.prototype.constructor = MathCeilingCommand;
-	var MathTruncateCommand = function(node) {
-		MathSingleCommand.call(this,node);
-		this.getId = function() {
-			return _this.Consts.execution.MATH_TRUNCATE;
-		};
+	var MathTruncateCommand = function(parent,node) {
+		MathSingleCommand.call(this,parent,node);
 		this.initializeValue = function(value) {
 			return Math.trunc(value);
 		};
 	};
 	MathTruncateCommand.prototype = MathSingleCommand.prototype;
 	MathTruncateCommand.prototype.constructor = MathTruncateCommand;
-	var ComparisonCommand = function(node) {
-		EngineCommand.call(this);
-		var _values = [];
-		this.setupExecCallback = function(cmp,value) {
+	var ComparisonCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
+		var _this2 = this;
+		this.execCallback = function(cmp,value) {
 		};
-		this.setupExec = function(context,id) {
-			var values = _thisExec(context);
-			if (values.length > 0) {
-				var res = true;
-				var cmp = values[0];
-				for (var i = 1; res && i < values.length; i++) {
-					this.setupExecCallback(cmp,values[i]);
-				}
-				return res;
-			} else {
-				throw new Error(id+": no values to compare.");
-			}
-		};
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			var values = [];
 			var component;
 			this.forEach(function(cmd) {
@@ -1099,68 +1125,133 @@ var Engine = new (function() {
 					values.push(component);
 				}
 			});
-			return values;
-		};
-		var _thisExec = this.execute;
-		this.enforceNoEntries(node);
-		this.enforceNoAssociations(node);
-		node.children.forEach(function(child) {
-			var name = child.name.rawString;
-			var cmd;
-			switch (name) {
-				case _this.Consts.execution.OP_VARS:
-					cmd = new ComparisonVarsCommand(child);
-					break;
-				case _this.Consts.execution.OP_LITERALS:
-					cmd = new ComparisonLiteralsCommand(child);
-					break;
-				default:
-					cmd = _this2.attemptScoping(child,name,context);
-					break;
+			if (values.length > 0) {
+				var res = true;
+				var cmp = values[0];
+				for (var i = 1; res && i < values.length; i++) {
+					res = this.execCallback(cmp,values[i]);
+				}
+				return res;
+			} else {
+				throw new EngineError(this.nodeName+": no values to compare.",this);
 			}
-			_this2.push(cmd);
+		};
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoAssociations(node);
+			node.children.forEach(function(child) {
+				var name = child.name.rawString;
+				var cmd;
+				switch (name) {
+					case _this.Consts.execution.OP_VARS:
+						cmd = new ComparisonVarsCommand(_this2,child);
+						break;
+					case _this.Consts.execution.OP_LITERALS:
+						cmd = new ComparisonLiteralsCommand(_this2,child);
+						break;
+					default:
+						cmd = _this2.attemptScoping(child,name);
+						break;
+				}
+				_this2.push(cmd);
+			});
 		});
 	};
 	ComparisonCommand.prototype = EngineCommand.prototype;
 	ComparisonCommand.prototype.constructor = ComparisonCommand;
-	var ComparisonVarsCommand = function(node) {
-		EngineCommand.call(this);
+	var ComparisonVarsCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
 		var _this2 = this;
 		var _vars = [];
-		this.execute = function(context) {
+		this.internalExecute = function(cmp,value) {
 			var res = [];
 			for (var i = 0; i < _vars.length; i++) {
 				res.push(context.stack.peek().getVariable(_vars[i]));
 			}
 			return res;
 		};
-		this.enforceNoAssociations(node);
-		this.enforceNoChildren(node);
-		node.entries.forEach(function(entry) {
-			_vars.push(entry.rawString);
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoAssociations(node);
+			_this2.enforceNoChildren(node);
+			node.entries.forEach(function(entry) {
+				_vars.push(entry.rawString);
+			});
 		});
 	};
 	ComparisonVarsCommand.prototype = EngineCommand.prototype;
 	ComparisonVarsCommand.prototype.constructor = ComparisonVarsCommand;
-	var ComparisonLiteralsCommand = function(node) {
-		EngineCommand.call(this);
+	var ComparisonLiteralsCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
 		var _this2 = this;
 		var _literals = [];
-		this.execute = function(context) {
+		this.internalExecute = function(context) {
 			return _literals;
 		};
-		this.enforceNoAssociations(node);
-		this.enforceNoChildren(node);
-		node.entries.forEach(function(entry) {
-			_literals.push(_parseVarValue(entry.rawString));
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoAssociations(node);
+			_this2.enforceNoChildren(node);
+			node.entries.forEach(function(entry) {
+				_literals.push(_parseVarValue(entry.rawString));
+			});
 		});
 	};
 	ComparisonLiteralsCommand.prototype = EngineCommand.prototype;
 	ComparisonLiteralsCommand.prototype.constructor = ComparisonLiteralsCommand;
-	var LimitCommand = function(node) {
-		EngineCommand.call(this);
+	var EqualsCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp === value;
+		};
+	};
+	EqualsCommand.prototype = ComparisonCommand.prototype;
+	EqualsCommand.prototype.constructor = EqualsCommand;
+	var NotEqualsCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp !== value;
+		};
+	};
+	NotEqualsCommand.prototype = ComparisonCommand.prototype;
+	NotEqualsCommand.prototype.constructor = NotEqualsCommand;
+	var LessThanCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp < value;
+		};
+	};
+	LessThanCommand.prototype = ComparisonCommand.prototype;
+	LessThanCommand.prototype.constructor = LessThanCommand;
+	var GreaterThanCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp > value;
+		};
+	};
+	GreaterThanCommand.prototype = ComparisonCommand.prototype;
+	GreaterThanCommand.prototype.constructor = GreaterThanCommand;
+	var LessThanOrEqualToCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp <= value;
+		};
+	};
+	LessThanOrEqualToCommand.prototype = ComparisonCommand.prototype;
+	LessThanOrEqualToCommand.prototype.constructor = LessThanOrEqualToCommand;
+	var GreaterThanOrEqualToCommand = function(parent,node) {
+		ComparisonCommand.call(this,parent,node);
+		this.execCallback = function(cmp,value) {
+			return cmp >= value;
+		};
+	};
+	GreaterThanOrEqualToCommand.prototype = ComparisonCommand.prototype;
+	GreaterThanOrEqualToCommand.prototype.constructor = GreaterThanOrEqualToCommand;
+	var LimitCommand = function(parent,node) {
+		EngineCommand.call(this,parent);
 		var _this2 = this;
-		this.execute = function(context) {
+		this.count = function(context) {
 			var res = new LimitCommand.Data();
 			this.forEach(function(cmd) {
 				var value = cmd.execute(context);
@@ -1171,62 +1262,65 @@ var Engine = new (function() {
 					res.totalCount++;
 				}
 			});
-			return trueCount;
+			return res;
 		};
-		this.enforceNoEntries(node);
-		this.enforceNoAssociations(node);
-		node.children.forEach(function(child) {
-			var name = child.name.rawString;
-			var cmd;
-			switch (name) {
-				case _this.Consts.execution.LOGIC_AND:
-					cmd = new AndCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_OR:
-					cmd = new OrCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_NAND:
-					cmd = new NandCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_NOR:
-				case _this.Consts.execution.LOGIC_NOR_ALIAS:
-					cmd = new NorCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_XOR:
-					cmd = new XorCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_XNOR:
-					cmd = new XnorCommand(child);
-					break;
-				case _this.Consts.execution.LOGIC_MUTEX:
-					cmd = new MutexCommand(child);
-					break;
-				case _this.Consts.execution.CMP_EQ:
-					cmd = new EqualsCommand(child);
-					break;
-				case _this.Consts.execution.CMP_NEQ:
-					cmd = new NotEqualsCommand(child);
-					break;
-				case _this.Consts.execution.CMP_LT:
-					cmd = new LessThanCommand(child);
-					break;
-				case _this.Consts.execution.CMP_GT:
-					cmd = GreaterThanCommand(child);
-					break;
-				case _this.Consts.execution.CMP_LTEQ:
-					cmd = LessThanOrEqualToCommand(child);
-					break;
-				case _this.Consts.execution.CMP_GTEQ:
-					cmd = GreaterThanOrEqualTo(child);
-					break;
-				default:
-					cmd = _this2.attemptMath(child,name);
-					if (typeof cmd === "undefined") {
-						cmd = _this2.attemptScoping(child,name);
-					}
-					break;
-			}
-			_this2.push(cmd);
+		this.ngCatch(function() {
+			_this2.nodeName = node.name.rawString;
+			_this2.enforceNoEntries(node);
+			_this2.enforceNoAssociations(node);
+			node.children.forEach(function(child) {
+				var name = child.name.rawString;
+				var cmd;
+				switch (name) {
+					case _this.Consts.execution.LOGIC_AND:
+						cmd = new AndCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_OR:
+						cmd = new OrCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_NAND:
+						cmd = new NandCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_NOR:
+					case _this.Consts.execution.LOGIC_NOR_ALIAS:
+						cmd = new NorCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_XOR:
+						cmd = new XorCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_XNOR:
+						cmd = new XnorCommand(_this2,child);
+						break;
+					case _this.Consts.execution.LOGIC_MUTEX:
+						cmd = new MutexCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_EQ:
+						cmd = new EqualsCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_NEQ:
+						cmd = new NotEqualsCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_LT:
+						cmd = new LessThanCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_GT:
+						cmd = new GreaterThanCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_LTEQ:
+						cmd = new LessThanOrEqualToCommand(_this2,child);
+						break;
+					case _this.Consts.execution.CMP_GTEQ:
+						cmd = new GreaterThanOrEqualToCommand(_this2,child);
+						break;
+					default:
+						cmd = _this2.attemptMath(child,name);
+						if (typeof cmd === "undefined") {
+							cmd = _this2.attemptScoping(child,name);
+						}
+						break;
+				}
+				_this2.push(cmd);
+			});
 		});
 	};
 	LimitCommand.Data = function() {
@@ -1235,138 +1329,60 @@ var Engine = new (function() {
 	};
 	LimitCommand.prototype = EngineCommand.prototype;
 	LimitCommand.prototype.constructor = LimitCommand;
-	var EqualsCommand = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp === value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_EQ);
-		};
-	};
-	EqualsCommand.prototype = ComparisonCommand.prototype;
-	EqualsCommand.prototype.constructor = EqualsCommand;
-	var NotEqualsCommand = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp !== value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_NEQ);
-		};
-	};
-	NotEqualsCommand.prototype = ComparisonCommand.prototype;
-	NotEqualsCommand.prototype.constructor = NotEqualsCommand;
-	var LessThanCommand = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp < value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_LT);
-		};
-	};
-	LessThanCommand.prototype = ComparisonCommand.prototype;
-	LessThanCommand.prototype.constructor = LessThanCommand;
-	var GreaterThanCommand = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp > value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_GT);
-		};
-	};
-	GreaterThanCommand.prototype = ComparisonCommand.prototype;
-	GreaterThanCommand.prototype.constructor = GreaterThanCommand;
-	var LessThanOrEqualTo = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp <= value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_LTEQ);
-		};
-	};
-	LessThanOrEqualTo.prototype = ComparisonCommand.prototype;
-	LessThanOrEqualTo.prototype.constructor = LessThanOrEqualTo;
-	var GreaterThanOrEqualToCommand = function(node) {
-		ComparisonCommand.call(this,node);
-		this.setupExecCallback = function(cmp,value) {
-			return cmp >= value;
-		};
-		this.execute = function(context) {
-			return this.setupExec(context,_this.Consts.execution.CMP_GTEQ);
-		};
-	};
-	GreaterThanOrEqualTo.prototype = ComparisonCommand.prototype;
-	GreaterThanOrEqualTo.prototype.constructor = GreaterThanOrEqualTo;
-	var AndCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
+	var AndCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			var data = this.count(context);
 			return data.trueCount === data.totalCount;
 		};
 	};
 	AndCommand.prototype = LimitCommand.prototype;
 	AndCommand.prototype.constructor = AndCommand;
-	Var OrCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
-			return data.trueCount > 0;
+	var OrCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			return this.count(context).trueCount > 0;
 		};
 	};
 	OrCommand.prototype = LimitCommand.prototype;
 	OrCommand.prototype.constructor = OrCommand;
-	Var NandCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
+	var NandCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			var data = this.count(context);
 			return data.trueCount !== data.totalCount;
 		};
 	};
 	NandCommand.prototype = LimitCommand.prototype;
 	NandCommand.prototype.constructor = NandCommand;
-	Var NorCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
-			return data.trueCount === 0;
+	var NorCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			return this.count(context).trueCount === 0;
 		};
 	};
 	NorCommand.prototype = LimitCommand.prototype;
 	NorCommand.prototype.constructor = NorCommand;
-	Var XorCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
-			return data.trueCount%2 === 1;
+	var XorCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			return this.count(context).trueCount%2 === 1;
 		};
 	};
 	XorCommand.prototype = LimitCommand.prototype;
 	XorCommand.prototype.constructor = XorCommand;
-	Var XnorCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
-			return data.trueCount%2 === 0;
+	var XnorCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			return this.count(context).trueCount%2 === 0;
 		};
 	};
 	XnorCommand.prototype = LimitCommand.prototype;
 	XnorCommand.prototype.constructor = XnorCommand;
-	Var MutexCommand = function(node) {
-		LimitCommand.call(this,node);
-		var _parentExec = this.execute;
-		this.execute = function(context) {
-			var data = _parentExec(context);
-			return data.trueCount === 1;
+	var MutexCommand = function(parent,node) {
+		LimitCommand.call(this,parent,node);
+		this.internalExecute = function(context) {
+			return this.count(context).trueCount === 1;
 		};
 	};
 	MutexCommand.prototype = LimitCommand.prototype;
@@ -1378,7 +1394,17 @@ var Engine = new (function() {
 			this.filePath = _this.Consts.io.paths.GFX_USER+node.name.rawString;
 			this.artist = node.getAssociation(_this.Consts.definition.IMAGE_ARTIST).rawString;
 			this.source = node.getAssociation(_this.Consts.definition.IMAGE_SOURCE).rawString;
+			this.isAlpha = false;
 		}
+		this.display = function() {
+			if (this.isAlpha) {
+				_image.style.display = "none";
+			} else {
+				_image.style.display = "block";
+				_image.setAttribute("src",this.filePath);
+				_image.setAttribute("title",_stripHTML(LocalizationMap.getString(_this.Consts.localization.configKeys.IMAGE_SOURCE)));
+			}
+		};
 	};
 	var ObjectReference = function(id,node) {
 		var _this2 = this;
@@ -1387,7 +1413,7 @@ var Engine = new (function() {
 		this.desc = node.getAssociation(_this.Consts.definition.DESC).rawString;
 		this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).rawString) : false;
 		this.interactable = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
-		this.onInteract = this.interactable ? new EngineEvent(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineEvent.NO_OP;
+		this.onInteract = this.interactable ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
 	};
 	var Room = function(id,node) {
 		var _this2 = this;
@@ -1405,7 +1431,7 @@ var Engine = new (function() {
 				if (_objects.hasOwnProperty(entry.rawString)) {
 					_this2.contents.push(_objects[entry.rawString]);
 				} else {
-					throw new Error("Object \""+entry.rawString+"\" is undefined.");
+					throw new EngineError("Object \""+entry.rawString+"\" is undefined.",this);
 				}
 			});
 		}
@@ -1430,16 +1456,16 @@ var Engine = new (function() {
 		};
 		this.push = function(edge) {
 			if (typeof this.getEdge(edge) !== "undefined") {
-				throw new Error("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.");
+				throw new EngineError("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.",this);
 			} else {
 				_arr.push(edge);
 			}
 		};
 	};
 	var GraphEdge = function(from,to,node) {
-		this.from = _rooms[from];
-		this.to = _rooms[to];
-		this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineEvent(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineEvent.NO_OP;
+		this.from = _rooms[from.rawString];
+		this.to = _rooms[to.rawString];
+		this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
 	};
 
 	// CFG
@@ -1453,9 +1479,11 @@ var Engine = new (function() {
 	var _graph;
 	var _imageAlpha = new ImageReference();
 	_imageAlpha.id = "alpha";
-	_imageAlpha.filePath = _this.Consts.io.paths.GFX_ENGINE+"alpha.png";
+	_imageAlpha.filePath = "";
+//	_imageAlpha.filePath = "gfx/app/bsp_2.png";
 	_imageAlpha.artist = "";
 	_imageAlpha.source = "";
+	_imageAlpha.isAlpha = true;
 	// HTML
 	var _container;
 	var _containerContent;
@@ -1472,26 +1500,28 @@ var Engine = new (function() {
 		} else if (str === "false") {
 			return false;
 		} else {
-			throw new RangeError("Cannot convert value \""+str+"\" to a Boolean.");
+			throw new EngineError("Cannot convert value \""+str+"\" to a Boolean.",this);
 		}
 	};
 	var _wrapCallback = function(req,manager,callback) {
 		req.execute(function(res) {
 			if (res.error) {
-				manager.error(new Error(res.text),res);
+				manager.error(new EngineError(res.text,res));
 			} else {
 				try {
 					callback(res);
 					manager.increment();
 				} catch (e) {
-					manager.error(e,res);
+					var e2 = new EngineError(e.message,res);
+					e2.stack = e.stack;
+					manager.error(e2);
 				}
 			}
 		});
 	};
 	var _verifyStringExists = function(id) {
 		if (!LocalizationMap.hasString(id)) {
-			throw new Error("Localization missing required association '"+id+"'.");
+			throw new EngineError("Localization missing required association '"+id+"'.",this);
 		}
 	};
 	var _loadStylesheet = function(file) {
@@ -1511,7 +1541,7 @@ var Engine = new (function() {
 	var _parseState = function(node) {
 		var res = new Scope(node.name.rawString);
 		node.associations.forEach(function(key,value) {
-			res.setVariable(key,_parseVarValue(value.rawString));
+			res.defineVariable(key,value.rawString);
 		});
 		node.children.forEach(function(child) {
 			res.addChild(_parseState(child));
@@ -1519,62 +1549,74 @@ var Engine = new (function() {
 		return res;
 	};
 	var _parseImages = function(map) {
+		var id;
 		try {
 			_images = {};
-			var id;
 			map.globalNode.children.forEach(function(child) {
 				id = child.getAssociation(_this.Consts.definition.IMAGE_ID).rawString;
 				if (_images.hasOwnProperty(id)) {
-					throw new Error("An image with I.D. \""+id+"\" already exists.");
+					throw new EngineError("An image with I.D. \""+id+"\" already exists.",this);
 				} else {
 					_images[id] = new ImageReference(id,child);
 				}
 			});
 		} catch (e) {
-			e.message += " (in image with I.D. \""+id+"\")";
+			if (Array.isArray(e.configStack)) {
+				e.push(id);
+			} else {
+				e.message += " (in image with I.D. \""+id+"\")";
+			}
 			throw e;
 		}
 	};
 	var _parseObjects = function() {
+		var id;
 		try {
 			_objects = {};
-			var id;
 			_objectsMap.globalNode.children.forEach(function(child) {
 				id = child.name.rawString;
 				if (_objects.hasOwnProperty(id)) {
-					throw new Error("An object with I.D. \""+id+"\" already exists.");
+					throw new EngineError("An object with I.D. \""+id+"\" already exists.",this);
 				} else {
 					_objects[id] = new ObjectReference(id,child);
 				}
 			});
 		} catch (e) {
-			e.message += " (in object with I.D. \""+id+"\")";
+			if (Array.isArray(e.configStack)) {
+				e.configStack.push(id);
+			} else {
+				e.message += " (in object with I.D. \""+id+"\")";
+			}
 			throw e;
 		}
 	};
 	var _parseRooms = function() {
+		var id;
 		try {
 			_rooms = {};
-			var id;
 			_roomsMap.globalNode.children.forEach(function(child) {
 				id = child.name.rawString;
 				if (_rooms.hasOwnProperty(id)) {
-					throw new Error("A room with I.D. \""+id+"\" already exists.");
+					throw new EngineError("A room with I.D. \""+id+"\" already exists.",this);
 				} else {
 					_rooms[id] = new Room(id,child);
 				}
 			});
 		} catch (e) {
-			e.message += " (in room with I.D. \""+id+"\")";
+			if (Array.isArray(e.configStack)) {
+				e.configStack.push(id);
+			} else {
+				e.message += " (in room with I.D. \""+id+"\")";
+			}
 			throw e;
 		}
 	};
 	var _parseGraph = function() {
+		var from;
+		var to;
 		try {
 			_graph = new Graph();
 			var name;
-			var from;
-			var to;
 			_graphMap.globalNode.children.forEach(function(child) {
 				from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
 				to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
@@ -1582,11 +1624,15 @@ var Engine = new (function() {
 				if (name === _this.Consts.definition.GRAPH_EDGE) {
 					_graph.push(new GraphEdge(from,to,child));
 				} else {
-					throw new Error("Unexpected child \""+name+"\" in graph definition.");
+					throw new EngineError("Unexpected child \""+name+"\" in graph definition.",this);
 				}
 			});
 		} catch (e) {
-			e.message += " (in graph edge from \""+from+"\" to \""+to+"\")";
+			if (Array.isArray(e.configStack)) {
+				e.configStack.push(id);
+			} else {
+				e.message += " (in graph edge from \""+from.rawString+"\" to \""+to.tawString+"\")";
+			}
 			throw e;
 		}
 	};
@@ -1595,7 +1641,7 @@ var Engine = new (function() {
 		if (_rooms.hasOwnProperty(to)) {
 			_state.setVariable(_this.Consts.definition.STATE_LOCATION,to);
 		} else {
-			throw new Error("Unable to move to room '"+to+"': no such room exists.");
+			throw new EngineError("Unable to move to room '"+to+"': no such room exists.",this);
 		}
 	};
 	var _examineObject = function(id,breakFirst) {
@@ -1608,7 +1654,7 @@ var Engine = new (function() {
 				_logPushNoBreak(obj.desc);
 			}
 		} else {
-			throw new Error("Unable to examine object '"+id+"': no such object exists.");
+			throw new EngineError("Unable to examine object '"+id+"': no such object exists.",this);
 		}
 	};
 	var _interactWithObject = function(id,context) {
@@ -1617,10 +1663,10 @@ var Engine = new (function() {
 			if (obj.interactable) {
 				obj.onInteract(context);
 			} else {
-				throw new Error("Unable to interact with object '"+id+"': object does not define interaction behavior.");
+				throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",this);
 			}
 		} else {
-			throw new Error("Unable to interact with object '"+id+"': no such object exists.");
+			throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",this);
 		}
 	};
 	var _logPush = function(id) {
@@ -1657,7 +1703,7 @@ var Engine = new (function() {
 
 	window.addEventListener("DOMContentLoaded",function() {
 		_container = document.getElementById("container");
-		_containerContent = container.innerHTML;
+		_containerContent = _container.innerHTML;
 
 		var manager = new LoadCounter(7,_container);
 		manager.onLoad = function() {
@@ -1667,7 +1713,13 @@ var Engine = new (function() {
 				_parseRooms();
 				_parseGraph();
 			} catch (e) {
-				manager.error(e,null);
+				if (e instanceof EngineError) {
+					manager.error(e);
+				} else {
+					var e2 = new EngineError(e.message);
+					e2.stack = e.stack;
+					manager.error(e2);
+				}
 				good = false;
 			}
 
@@ -1679,12 +1731,13 @@ var Engine = new (function() {
 				_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
 				_quests = document.getElementById(_this.Consts.html.page.QUESTS);
 
-				document.title = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_PAGE);
+				document.title = _stripHTML(LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_PAGE));
 				_log.textContent = "";
 				_logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
 				_inv.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
 				_actions.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
 				_quests.innerHTML = LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+				_imageAlpha.display();
 			}
 		};
 		var query = location.search;
@@ -1716,7 +1769,7 @@ var Engine = new (function() {
 			_verifyStringExists(_this.Consts.localization.configKeys.INITIAL);
 			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_PAGE);
 			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_INV);
-			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_ACTIONS);
+			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_ACTS);
 			_verifyStringExists(_this.Consts.localization.configKeys.TITLE_QUESTS);
 			_verifyStringExists(_this.Consts.localization.configKeys.INV_ADD);
 			_verifyStringExists(_this.Consts.localization.configKeys.INV_REMOVE);
@@ -1724,12 +1777,13 @@ var Engine = new (function() {
 			_verifyStringExists(_this.Consts.localization.configKeys.ACTION_EXAMINE);
 			_verifyStringExists(_this.Consts.localization.configKeys.ACTION_INTERACT);
 			_verifyStringExists(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
+			_verifyStringExists(_this.Consts.localization.configKeys.IMAGE_SOURCE);
 		});
 		var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 		_wrapCallback(req3,manager,function(res) {
 			_state = _parseState(new COM.Map(res.text).globalNode,"global");
 			if (!_state.hasVariable(_this.Consts.definition.STATE_LOCATION)) {
-				throw new Error("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.");
+				throw new EngineError("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.",this);
 			}
 		});
 		var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
