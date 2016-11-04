@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.2.4.4
+* Made a bunch of publically-viewable stuff immutable in ng.js (including entire Engine object).
+
 ## v0.2.4.3
 * Removed game/common/app/worlds.cfg and moved contents into a comment in game.common/ng/state.cfg.
 
