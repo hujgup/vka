@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.3.0.0
+* Mipmapping architecture setup.
+
 ## v0.2.4.4
 * Made a bunch of publically-viewable stuff immutable in ng.js (including entire Engine object).
 
