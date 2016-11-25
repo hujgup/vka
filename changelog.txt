@@ -2,7 +2,10 @@
 ## VKA CHANGELOG ##
 ###################
 
-# v0.4.1.0
+## v0.4.2.0
+* Added ability to make a link to an entered filter in the image spec.
+
+## v0.4.1.0
 * A pre-set filter can not be part of the image spec URL through the "filter" query string key.
 * Fixed spelling error in image spec.
 * Fixed numbering format consistency im image spec body.

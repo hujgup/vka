@@ -307,29 +307,38 @@ function cascadeShow(node,nav) {
 }
 function filterTags(tagInput,nav) {
 	var value = tagInput.value.trim();
+	var errMsg;
 	var filter;
 	if (value.length > 0) {
 		var compiler = new LogicCompiler();
-		filter = compiler.compile(value);
-		console.log(filter);
+		try {
+			filter = compiler.compile(value);
+			console.log(filter);
+		} catch (e) {
+			errMsg = e.message;
+		}
 	} else {
 		filter = new LogicBoolNode(true);
 	}
-	var i = new DOMRecursiveIterator(nav);
-	i.forEach(function(node) {
-		if (node.hasAttribute("data-nav-tags")) {
-			node.style.display = "none";
-		}
-	});
-	var tags;
-	i.forEach(function(node) {
-		if (node.hasAttribute("data-nav-tags")) {
-			tags = node.getAttribute("data-nav-tags").split(" ");
-			if (filter.resolve(tags)) {
-				cascadeShow(node,nav);
+	if (typeof errMsg === "undefined") {
+		var i = new DOMRecursiveIterator(nav);
+		i.forEach(function(node) {
+			if (node.hasAttribute("data-nav-tags")) {
+				node.style.display = "none";
 			}
-		}
-	});
+		});
+		var tags;
+		i.forEach(function(node) {
+			if (node.hasAttribute("data-nav-tags")) {
+				tags = node.getAttribute("data-nav-tags").split(" ");
+				if (filter.resolve(tags)) {
+					cascadeShow(node,nav);
+				}
+			}
+		});
+	} else {
+		alert(errMsg);
+	}
 }
 
 function getTextColor(r,g,b) {
@@ -378,6 +387,28 @@ window.addEventListener("load",function() {
 		tagInput.value = query.filter;
 		filterTags(tagInput,nav);
 	}
+	var makeLink = document.getElementById("makeLink");
+	makeLink.addEventListener("click",function() {
+		var value = tagInput.value.trim();
+		var errMsg;
+		if (value !== "") {
+			var compiler = new LogicCompiler();
+			try {
+				compiler.compile(value);
+			} catch (e) {
+				errMsg = e.message;
+			}
+		}
+		if (typeof errMsg === "undefined") {
+			var text = location.origin+location.pathname;
+			if (value !== "") {
+				text += "?filter="+encodeURIComponent(value);
+			}
+			tagInput.value = text;
+		} else {
+			alert(errMsg);
+		}
+	});
 
 	var bloodTable = document.getElementById("bloodTable");
 	var i = new DOMRecursiveIterator(bloodTable);
