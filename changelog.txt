@@ -2,6 +2,16 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.4.0.0
+* Added image consistency specification (for image commissions).
+* Mipmapping now works.
+* Images are now displayed where appropriate, and source linking has been implemented.
+* Added @move command that traverses graph edges, and won't move unless an edge exists.
+* Renamed ACTION_MOVE const to ACTION_TELEPORT to reduce confusion.
+
+## v0.3.0.1
+* PHP code now returns status code 500 if an uncaught exception propagates to the return level.
+
 ## v0.3.0.0
 * Mipmapping architecture setup.
 

@@ -1,4 +1,6 @@
 <?php
+	require_once("../errHandle.php");
+
 	if (isset($_POST["folder"])) {
 		$path = "../../../".urldecode($_POST["folder"]);
 		if (file_exists($path)) {

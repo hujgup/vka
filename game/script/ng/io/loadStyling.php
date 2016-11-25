@@ -1,4 +1,6 @@
 <?php
+	require_once("../errHandle.php");
+
 	$arr = [];
 	$path = "../../../style/app";
 	$i = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));

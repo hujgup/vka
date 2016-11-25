@@ -1,12 +1,15 @@
 <?php
-	define("USER_PATH","../gfx/app/");
-	define("MIPMAP_PATH","../gfx/ng/mipmaps/");
+	require_once("../errHandle.php");
+
+	define("USER_PATH",__DIR__."/../../../gfx/app/");
+	define("MIPMAP_PATH",__DIR__."/../../../gfx/ng/mipmaps/");
 
 	class TimeTable {
 		const ENTRY_SPLIT = "\r\n";
 		const COMPONENT_SPLIT = "|";
 		const FILENAME = "times.txt";
 		private static $PATH = NULL;
+		private $_changed = NULL;
 		private $_map = NULL;
 		public function __construct() {
 			if (self::$PATH === NULL) {
@@ -21,6 +24,7 @@
 					$this->setModTime($filename,$modTime);
 				}
 			}
+			$this->_changed = FALSE;
 		}
 		public function isDefined($filename) {
 			return array_key_exists($filename,$this->_map);
@@ -30,9 +34,11 @@
 		}
 		public function setModTime($filename,$modTime) {
 			$this->_map[$filename] = intval($modTime);
+			$this->_changed = TRUE;
 		}
 		public function unsetEntry($filename) {
 			unset($this->_map[$filename]);
+			$this->_changed = TRUE;
 		}
 		public function difference(&$arr) {
 			$res = [];
@@ -44,15 +50,18 @@
 			return $res;
 		}
 		public function export() {
-			$transformed = array_map(function($key,$value) {
-				return $key.self::COMPONENT_SPLIT.$value;
-			},array_keys($this->_map),$this->_map);
-			file_put_contents(self::$PATH,implode(self::ENTRY_SPLIT,$transformed));
+			if ($this->_changed) {
+				$transformed = array_map(function($key,$value) {
+					return $key.self::COMPONENT_SPLIT.$value;
+				},array_keys($this->_map),$this->_map);
+				file_put_contents(self::$PATH,implode(self::ENTRY_SPLIT,$transformed));
+				$this->_changed = FALSE;
+			}
 		}
 	}
 
 	$mipmaps = [];
-	function create_mipmap($fileInfo,&$times) {
+	function create_mipmap($fileInfo) {
 		global $mipmaps;
 
 		$filename = $fileInfo->getFilename();
@@ -65,54 +74,54 @@
 		} else {
 			throw new Exception("File '".$filename."': unsupported file format '".$ext."'. Source file must be a .png file.");
 		}
-		imagesavealpha($sourceImg,TRUE);
+		imagealphablending($sourceImg,FALSE);
+		imagesavealpha($sourceImg,TRUE); // Use full-range transparancy (instead of true/false)
 
 		$sourceWidth = imagesx($sourceImg);
 		$sourceHeight = imagesy($sourceImg);
-		$mipmapWidth = 4*$sourceWidth/3;
+		$mipmapWidth = $sourceWidth + $sourceWidth/2;
 		$mipmapHeight = $sourceHeight;
 
 		$mipmapImg = imagecreatetruecolor($mipmapWidth,$mipmapHeight);
+		imagealphablending($mipmapImg,FALSE);
 		imagesavealpha($mipmapImg,TRUE);
-		imagecolorallocate($mipmapImg,0,255,0);
-		$interpolationMethod = IMG_BICUBIC;
+		// Transparent background
+		$bgCol = imagecolorallocatealpha($mipmapImg,0,0,0,127);
+		imagefilledrectangle($mipmapImg,0,0,$mipmapWidth - 1,$mipmapHeight - 1,$bgCol);
+		$interpolationMethod = IMG_SINC;
 		imagesetinterpolation($mipmapImg,$interpolationMethod);
 		imagecopyresampled($mipmapImg,$sourceImg,0,0,0,0,$sourceWidth,$sourceHeight,$sourceWidth,$sourceHeight);
 
-		$targetX = $mipmapWidth/2;
+		$targetX = $mipmapWidth - $mipmapWidth/3;
 		$targetY = 0;
 		$targetWidth = $sourceWidth/2;
 		$targetHeight = $sourceHeight/2;
-		$lastMipmap = $sourceImg;
 		$currentMipmap = NULL;
 		while ($targetWidth >= 1 && $targetHeight >= 1) {
 			$currentMipmap = imagecreatetruecolor($targetWidth,$targetHeight);
+			imagealphablending($currentMipmap,FALSE);
 			imagesavealpha($currentMipmap,TRUE);
 			imagecolorallocate($mipmapImg,0,255,0);
 			imagesetinterpolation($currentMipmap,$interpolationMethod);
-			$lastWidth = imagesx($lastMipmap);
-			$lastHeight = imagesy($lastMipmap);
-			imagecopyresampled($currentMipmap,$lastMipmap,0,0,0,0,$targetWidth,$targetHeight,$lastWidth,$lastHeight);
+			imagecopyresampled($currentMipmap,$sourceImg,0,0,0,0,$targetWidth,$targetHeight,$sourceWidth,$sourceHeight);
 			imagecopy($mipmapImg,$currentMipmap,$targetX,$targetY,0,0,$targetWidth,$targetHeight);
 
 			$targetY += $targetHeight;
 			$targetWidth /= 2;
 			$targetHeight /= 2;
-			imagedestroy($lastMipmap);
-			$lastMipmap = $currentMipmap;
+			imagedestroy($currentMipmap);
 		}
 
 		$mipmaps[$filename] = $mipmapImg;
 		imagedestroy($sourceImg);
-		if ($currentMipmap !== NULL) {
-			imagedestroy($currentMipmap);
-		}
 	}
-	function flush_mipmaps() {
+	function flush_mipmaps(&$times) {
 		global $mipmaps;
+
 		foreach ($mipmaps as $name => $image) {
-			imagepng($image,$name,9);
+			imagepng($image,MIPMAP_PATH.$name,9);
 			imagedestroy($image);
+			$times->setModTime($name,filemtime(MIPMAP_PATH.$name));
 		}
 		$mipmaps = [];
 	}
@@ -127,10 +136,16 @@
 			if ($filename !== TimeTable::FILENAME) {
 				$seenMipmaps[] = $filename;
 				if ($times->isDefined($filename)) {
-					$modTime = filemtime($fileInfo->getPathname());
-					// If file has changed
-					if ($times->getModTime($filename) !== $modTime) {
-						create_mipmap($fileInfo,$times);
+					if (file_exists(USER_PATH.$filename)) {
+						$modTime = filemtime(USER_PATH.$filename);
+						if ($times->getModTime($filename) !== $modTime) {
+							// File was changed
+							create_mipmap($fileInfo,$times);
+						}
+					} else {
+						// File was deleted
+						unlink(MIPMAP_PATH.$filename);
+						$times->unsetEntry($filename);
 					}
 				} else {
 					// File is in mipmaps but not time map - possible erronous manual file editing
@@ -161,6 +176,6 @@
 			}
 		}
 	}
-	flush_mipmaps();
+	flush_mipmaps($times);
 	$times->export();
 ?>

@@ -1,7 +1,3 @@
-For each instance of .rawString in ng.js, verify that I don't actually want .unescapedString
-
-Wrap image element in an a tag, set up linking, and update ng.js so that this works.
-
 Command structure is a set of select boxes or text input fields
 So "move to room x" would be like
 Menu 1 -> Select "Move"
@@ -10,4 +6,8 @@ Menu 2 -> Select "RESIDENTIAL CORRIDOR ALPHA"
 Confirm button appears
 Click confirm button
 On move action happens
+
+Setup actions so that game is playable
+
+
 

@@ -1,4 +1,6 @@
 <?php
+	require_once("../errHandle.php");
+
 	if (isset($_POST["lang"])) {
 		$path = "../../../localization/".urldecode($_POST["lang"]);
 		$i = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));

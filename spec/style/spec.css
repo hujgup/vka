@@ -1,0 +1,48 @@
+.indent {
+	border-left:4px solid #008282;
+	padding-left:8px;
+	padding-bottom:4px;
+	margin-top:4px;
+}
+.tag-input {
+	width:256px;
+	height:128px;
+}
+.area-group {
+	display:table;
+	border-collapse:collapse;
+}
+.area, .blood-table {
+	border:4px solid #008282;
+	background-color:#3b3d3c;
+}
+.area {
+	padding:8px;
+	display:table-cell;
+	vertical-align:top;
+}
+.blood-table {
+	border-collapse:collapse;
+}
+.blood-table th, .blood-table td {
+	border:1px solid white;
+	padding:2px 4px;
+	text-align:center;
+}
+.blood-table th[scope="row"] {
+	text-align:right;
+}
+.nav-list-1 {
+	list-style-type:lower-alpha;
+}
+.nav-list-2 {
+	list-style-type:lower-roman;
+}
+.nav-tags {
+	vertical-align:middle;
+}
+.mono {
+	font-family:"Courier New",monospace;
+	font-size:14px;
+	font-weight:bold;
+}

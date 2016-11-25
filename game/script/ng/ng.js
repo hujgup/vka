@@ -26,6 +26,7 @@ Ctrl+F headings:
 [COMMANDS - LIMIT LOGIC]
 [NG OBJECT REFERENCES]
 [VARS]
+[STATE WRAPPERS]
 [ACTIONS]
 [LOAD ASSISTORS]
 [INIT]
@@ -131,7 +132,7 @@ Object.defineProperty(this,"Engine",{
 					this.page = Object.freeze(new (function() {
 						var _this4 = this;
 						this.LOG = "log";
-						this.IMAGE = "image";
+						this.IMAGE = "imageContainer";
 						this.INV = "inventory";
 						this.ACTIONS = "actions";
 						this.QUESTS = "quests";
@@ -189,6 +190,7 @@ Object.defineProperty(this,"Engine",{
 					this.GRAPH_EDGE = _this2.CONFIG_ENGINE_PREFIX+"edge";
 					this.GRAPH_ORIGIN = _this2.CONFIG_ENGINE_PREFIX+"from";
 					this.GRAPH_DESTINATION = _this2.CONFIG_ENGINE_PREFIX+"to";
+					this.GRAPH_EVT_TRAVERSAL = _this2.CONFIG_ENGINE_PREFIX+"onTraversal";
 					this.GRAPH_EVT_FIRST_TRAVERSAL = _this2.CONFIG_ENGINE_PREFIX+"onFirstTraversal";
 					this.IMAGE_ID = _this2.CONFIG_ENGINE_PREFIX+"id";
 					this.IMAGE_ARTIST = _this2.CONFIG_ENGINE_PREFIX+"artist";
@@ -201,7 +203,8 @@ Object.defineProperty(this,"Engine",{
 				})());
 				this.execution = Object.freeze(new (function() {
 					var _this3 = this;
-					this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"teleport";
+					this.ACTION_TELEPORT = _this2.CONFIG_ENGINE_PREFIX+"teleport";
+					this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"move";
 					this.ACTION_MOVE_TO = _this2.CONFIG_ENGINE_PREFIX+"to";
 					this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"examine";
 					this.ACTION_EXAMINE_OBJECT = _this2.CONFIG_ENGINE_PREFIX+"object";
@@ -275,11 +278,13 @@ Object.defineProperty(this,"Engine",{
 						this.GFX_ROOT = "gfx/";
 						this.GFX_USER = _this4.GFX_ROOT+_this3.USER_ID+"/";
 						this.GFX_ENGINE = _this4.GFX_ROOT+_this3.ENGINE_ID+"/";
+						this.GFX_MIPMAP = _this4.GFX_ENGINE+"mipmaps/";
 					})());
 					this.files = Object.freeze(new (function() {
 						var _this4 = this;
 						this.SCRIPT_LOAD_STYLING = _this3.paths.SCRIPT_IO+"loadStyling.php";
 						this.SCRIPT_LOAD_LOCALIZATION = _this3.paths.SCRIPT_IO+"loadLocalization.php";
+						this.SCRIPT_LOAD_IMAGES = _this3.paths.SCRIPT_IO+"loadImages.php";
 						this.SCRIPT_LOAD_MISC = _this3.paths.SCRIPT_IO+"loadNg.php";
 						this.COMMON_STATE = _this3.paths.COMMON_ENGINE+"state"+_this3.CONFIG_EXT;
 					})());
@@ -845,6 +850,9 @@ Object.defineProperty(this,"Engine",{
 							case _this.Consts.execution.ACTION_LOG:
 								cmd = new LogCommand(_this2,child);
 								break;
+							case _this.Consts.execution.ACTION_TELEPORT:
+								cmd = new TeleportCommand(_this2,child);
+								break;
 							case _this.Consts.execution.ACTION_MOVE:
 								cmd = new MoveCommand(_this2,child);
 								break;
@@ -929,11 +937,34 @@ Object.defineProperty(this,"Engine",{
 		SetVarCommand.prototype.constructor = SetVarCommand;
 		// [COMMANDS - ACTIONS]
 		// Commands that involve player-doable actions.
-		var MoveCommand = function(parent,node) {
+		var TeleportCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
+			var _this2 = this;
 			var _to;
 			this.internalExecute = function(context) {
 				_teleportPlayer(_to);
+			};
+			this.ngCatch(function() {
+				_this2.nodeName = node.name.unescapedString;
+				_this2.enforceNoEntries(node);
+				_this2.enforceNoChildren(node);
+				_this2.enforceOnlyTheseAssociations(node,[_this.Consts.execution.ACTION_MOVE_TO]);
+				_to = node.getAssociation(_this.Consts.execution.ACTION_MOVE_TO);
+				if (typeof _to !== "undefined") {
+					_to = _to.unescapedString;
+				} else {
+					throw new EngineError(_this.Consts.execution.ACTION_TELEPORT+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",_this2);
+				}
+			});
+		};
+		TeleportCommand.prototype = EngineCommand.prototype;
+		TeleportCommand.prototype.constructor = TeleportCommand;
+		var MoveCommand = function(parent,node) {
+			EngineCommand.call(this,parent);
+			var _this2 = this;
+			var _to;
+			this.internalExecute = function(context) {
+				_movePlayer(_to);
 			};
 			this.ngCatch(function() {
 				_this2.nodeName = node.name.unescapedString;
@@ -948,8 +979,6 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 		};
-		MoveCommand.prototype = EngineCommand.prototype;
-		MoveCommand.prototype.constructor = MoveCommand;
 		var ExamineCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
 			var _this2 = this;
@@ -1514,21 +1543,111 @@ Object.defineProperty(this,"Engine",{
 
 		// [NG OBJECT REFERENCES]
 		// Objects that wrap data read from .cfg files.
+		var MipmapComponent = function(x,y,width,height,img) {
+			var _img = img;
+			this.x = x;
+			this.y = y;
+			this.width = width;
+			this.height = height;
+			this.ratio = height/width;
+			this.draw = function(canvas,targetWidth) {
+				var targetHeight = targetWidth*this.ratio;
+				canvas.width = targetWidth;
+				canvas.height = targetHeight;
+				var context = canvas.getContext("2d");
+				context.clearRect(0,0,targetWidth,targetHeight);
+				context.drawImage(_img,this.x,this.y,this.width,this.height,0,0,targetWidth,targetHeight);
+			};
+		};
+		
+		var MipmappedImage = function(source) {
+			var _img = document.createElement("img");
+			_img.className = "offscreen";
+			_img.src = source;
+			document.documentElement.appendChild(_img);
+			var _loaded = false;
+			var _mipmaps = [];
+			var _inRange = function(index,targetWidth) {
+				return index === (_mipmaps.length - 1) || targetWidth > _mipmaps[index + 1].width;
+			};
+			var _create = function(x,y,width,height) {
+				_mipmaps.push(new MipmapComponent(x,y,width,height,_img));
+			};
+			_img.addEventListener("load",function() {
+				var x = 0;
+				var y = 0;
+				var width = _img.offsetWidth - _img.offsetWidth/3;
+				var height = _img.offsetHeight;
+				var firstIteration = true;
+				while ((firstIteration || y + height < _img.offsetHeight) && width >= 1 && height >= 1) {
+					_create(x,y,width,height);
+					if (firstIteration) {
+						x = width;
+						firstIteration = false;
+					} else {
+						y += height;
+					}
+					width /= 2;
+					height /= 2;
+				}
+				_loaded = true;
+			});
+			var _applyMipmap = function(container,source,firstCall) {
+				var a = document.createElement("a");
+					a.target = "_blank";
+					a.href = source;
+					a.setAttribute("title",_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.IMAGE_SOURCE)));
+					var canvas = document.createElement("canvas");
+						canvas.width = 1;
+						canvas.height = 10000; // So that clientWidth accounts for a potential scroll bar
+					a.appendChild(canvas);
+				container.appendChild(a);
+				var targetWidth = container.clientWidth;
+				for (var i = 0; i < _mipmaps.length; i++) {
+					if (_inRange(i,targetWidth)) {
+						_mipmaps[i].draw(canvas,targetWidth);
+						i = _mipmaps.length;
+					}
+				}
+				return a;
+			};
+
+			this.draw = function(container,source) {
+				return new Promise(function(resolve,reject) {
+					if (_loaded) {
+						resolve(_applyMipmap(container,source));
+					} else {
+						_img.addEventListener("load",function() {
+							if (_loaded) {
+								resolve(_applyMipmap(container,source));
+							} else {
+								// Guard against this listener firing before component creation listener
+								setTimeout(function() {
+									resolve(_applyMipmap(container,source));
+								},0);
+							}
+						});
+					}
+				});
+			};
+			this.dispose = function() {
+				document.documentElement.removeChild(_img);
+			};
+		};
 		var ImageReference = function(id,node) {
+			var _this2 = this;
 			if (typeof id !== "undefined") {
 				this.id = id;
 				this.filePath = _this.Consts.io.paths.GFX_USER+node.name.unescapedString;
 				this.artist = node.getAssociation(_this.Consts.definition.IMAGE_ARTIST).unescapedString;
 				this.source = node.getAssociation(_this.Consts.definition.IMAGE_SOURCE).unescapedString;
+				this.mipmap = new MipmappedImage(_this.Consts.io.paths.GFX_MIPMAP+node.name.unescapedString);
 				this.isAlpha = false;
 			}
 			this.display = function() {
-				if (this.isAlpha) {
-					_image.style.display = "none";
-				} else {
-					_image.style.display = "block";
-					_image.setAttribute("src",this.filePath);
-					_image.setAttribute("title",_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.IMAGE_SOURCE)));
+				_image.textContent = "";
+				if (!this.isAlpha) {
+					this.mipmap.draw(_image,this.source);
 				}
 			};
 		};
@@ -1546,7 +1665,7 @@ Object.defineProperty(this,"Engine",{
 			this.id = id;
 			this.name = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
 			this.desc = node.getAssociation(_this.Consts.definition.DESC).unescapedString;
-			this.imageId = node.hasAssociation(_this.Consts.definition.ROOM_IMAGE) ? node.getAssociation(_this.Consts.definition.ROOM_IMAGE) : null;
+			this.imageId = node.hasAssociation(_this.Consts.definition.ROOM_IMAGE) ? node.getAssociation(_this.Consts.definition.ROOM_IMAGE).unescapedString : null;
 			this.contents = [];
 			this.getImage = function() {
 				return this.imageId !== null ? _images[this.imageId] : _imageAlpha;
@@ -1565,15 +1684,17 @@ Object.defineProperty(this,"Engine",{
 		var Graph = function() {
 			var _arr = [];
 			this.getEdge = function(from,to) {
+/*
 				if (typeof to !== "undefined") {
 					to = from.to.id;
 					from = from.from.id;
 				}
+*/
 				var res;
 				var entry;
 				for (var i = 0; i < _arr.length; i++) {
 					entry = _arr[i];
-					if (entry.from.id === from && entry.to.id === to) {
+					if (entry.from.id === from.id && entry.to.id === to.id) {
 						res = entry;
 						break;
 					}
@@ -1589,9 +1710,19 @@ Object.defineProperty(this,"Engine",{
 			};
 		};
 		var GraphEdge = function(from,to,node) {
+			var _firstTraversal = true;
 			this.from = _rooms[from.unescapedString];
 			this.to = _rooms[to.unescapedString];
 			this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.onTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.traverse = function() {
+				_updateLocation(to);
+				if (_firstTraversal) {
+					this.onFirstTraversal.execute();
+					_firstTraversal = false;
+				}
+				this.onTraversal.execute();
+			};
 		};
 
 		// [VARS]
@@ -1606,11 +1737,6 @@ Object.defineProperty(this,"Engine",{
 		var _objects;
 		var _graph;
 		var _imageAlpha = new ImageReference();
-		_imageAlpha.id = "alpha";
-		_imageAlpha.filePath = "";
-	//	_imageAlpha.filePath = "gfx/app/bsp_2.png";
-		_imageAlpha.artist = "";
-		_imageAlpha.source = "";
 		_imageAlpha.isAlpha = true;
 		_imageAlpha = Object.freeze(_imageAlpha);
 		// HTML
@@ -1622,11 +1748,32 @@ Object.defineProperty(this,"Engine",{
 		var _actions;
 		var _quests;
 
+		// [STATE WRAPPERS]
+		// Aliasing some things to reduce the amount of code being written.
+		var _getCurrentRoom = function() {
+			return _rooms[_state.getVariable(_this.Consts.definition.STATE_LOCATION)];
+		};
+
 		// [ACTIONS]
 		// Fuctions that change the state of the game.
+		var _updateLocation = function(newLocation) {
+			_state.setVariable(_this.Consts.definition.STATE_LOCATION,newLocation);
+		};
 		var _teleportPlayer = function(to) {
 			if (_rooms.hasOwnProperty(to)) {
-				_state.setVariable(_this.Consts.definition.STATE_LOCATION,to);
+				_updateLocation(to);
+			} else {
+				throw new EngineError("Unable to teleport to room '"+to+"': no such room exists.",this);
+			}
+		};
+		var _movePlayer = function(to) {
+			if (_rooms.hasOwnProperty(to)) {
+				var edge = _graph.getEdge(_getCurrentRoom(),_rooms[to]);
+				if (typeof edge !== "undefined") {
+					edge.traverse();
+				} else {
+					throw new EngineError("Unable to move to room '"+to+"': current location +'"+_getCurrentLocation().id+"' and destination '"+to+"' have no direct connection.");
+				}
 			} else {
 				throw new EngineError("Unable to move to room '"+to+"': no such room exists.",this);
 			}
@@ -1856,7 +2003,7 @@ Object.defineProperty(this,"Engine",{
 					_inv.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
 					_actions.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
 					_quests.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
-					_imageAlpha.display();
+					_getCurrentRoom().getImage().display();
 				}
 			};
 			var query = location.search;
@@ -1907,7 +2054,7 @@ Object.defineProperty(this,"Engine",{
 					throw new EngineError("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.",this);
 				}
 			});
-			var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
+			var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_IMAGES);
 			req4.data = {
 				folder: _this.Consts.io.paths.COMMON_IMAGES
 			};
