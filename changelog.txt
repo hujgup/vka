@@ -2,6 +2,9 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.4.3.0
+* Made tag filters case insentitive.
+
 ## v0.4.2.0
 * Added ability to make a link to an entered filter in the image spec.
 

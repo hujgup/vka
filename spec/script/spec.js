@@ -241,7 +241,7 @@ function LogicCompiler() {
 			return res;
 		};
 
-		str = str.trim();
+		str = str.trim().toLowerCase();
 		var removeLength;
 		var group;
 		var match;
