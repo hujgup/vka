@@ -305,6 +305,32 @@ function cascadeShow(node,nav) {
 		cascadeShow(node.parentElement,nav);
 	}
 }
+function filterTags(tagInput,nav) {
+	var value = tagInput.value.trim();
+	var filter;
+	if (value.length > 0) {
+		var compiler = new LogicCompiler();
+		filter = compiler.compile(value);
+		console.log(filter);
+	} else {
+		filter = new LogicBoolNode(true);
+	}
+	var i = new DOMRecursiveIterator(nav);
+	i.forEach(function(node) {
+		if (node.hasAttribute("data-nav-tags")) {
+			node.style.display = "none";
+		}
+	});
+	var tags;
+	i.forEach(function(node) {
+		if (node.hasAttribute("data-nav-tags")) {
+			tags = node.getAttribute("data-nav-tags").split(" ");
+			if (filter.resolve(tags)) {
+				cascadeShow(node,nav);
+			}
+		}
+	});
+}
 
 function getTextColor(r,g,b) {
 	var res;
@@ -315,6 +341,19 @@ function getTextColor(r,g,b) {
 		b = parseInt(hex.substr(4,2),16);
 	}
 	return Math.sqrt(0.241*r*r + 0.691*g*g + 0.068*b*b) < 130 ? "white" : "black";
+}
+
+function parseQueryString() {
+	var res = {};
+	if (location.search.length > 0) {
+		var pairs = location.search.substr(1).split("&");
+		var pair;
+		for (var i = 0; i < pairs.length; i++) {
+			pair = pairs[i].split("=");
+			res[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+		}
+	}
+	return res;
 }
 
 window.addEventListener("load",function() {
@@ -332,31 +371,13 @@ window.addEventListener("load",function() {
 	var tagInput = document.getElementById("tagInput");
 	var tagFilter = document.getElementById("tagFilter");
 	tagFilter.addEventListener("click",function() {
-		var value = tagInput.value.trim();
-		var filter;
-		if (value.length > 0) {
-			var compiler = new LogicCompiler();
-			filter = compiler.compile(value);
-			console.log(filter);
-		} else {
-			filter = new LogicBoolNode(true);
-		}
-		var i = new DOMRecursiveIterator(nav);
-		i.forEach(function(node) {
-			if (node.hasAttribute("data-nav-tags")) {
-				node.style.display = "none";
-			}
-		});
-		var tags;
-		i.forEach(function(node) {
-			if (node.hasAttribute("data-nav-tags")) {
-				tags = node.getAttribute("data-nav-tags").split(" ");
-				if (filter.resolve(tags)) {
-					cascadeShow(node,nav);
-				}
-			}
-		});
+		filterTags(tagInput,nav);
 	});
+	var query = parseQueryString();
+	if (query.hasOwnProperty("filter")) {
+		tagInput.value = query.filter;
+		filterTags(tagInput,nav);
+	}
 
 	var bloodTable = document.getElementById("bloodTable");
 	var i = new DOMRecursiveIterator(bloodTable);

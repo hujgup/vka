@@ -2,6 +2,11 @@
 ## VKA CHANGELOG ##
 ###################
 
+# v0.4.1.0
+* A pre-set filter can not be part of the image spec URL through the "filter" query string key.
+* Fixed spelling error in image spec.
+* Fixed numbering format consistency im image spec body.
+
 ## v0.4.0.1
 * Added character tags to more nodes in the image spec.
 * Fixed bug where the negation filter in the image spec was not working properly.
