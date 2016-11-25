@@ -260,6 +260,7 @@ function LogicCompiler() {
 					case this.not:
 						node = new LogicNotNode();
 						pushChild(node,this.not);
+						current = node;
 						break;
 					case this.and:
 						node = new LogicAndNode();
