@@ -1,0 +1,2 @@
+sylladex/textMask.png|0
+sylladex/card.png|0

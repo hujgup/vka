@@ -1,1 +1,5 @@
-bsp_2.png|1479386778
+bsp_2.png|1480162155
+sylladex/bottomBgMask.png|1480162155
+sylladex/card.png|1480162386
+sylladex/textMask.png|1480162353
+sylladex/topBgMask.png|1480162155

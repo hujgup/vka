@@ -2,6 +2,11 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.4.4.0
+* Allowed images in gfx/app to be in subfolders.
+* Allowed users to specify certain images that should not be interpolated during resizing.
+* Added sylladex images.
+
 ## v0.4.3.0
 * Made tag filters case insentitive.
 
