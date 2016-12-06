@@ -5,6 +5,7 @@ Ctrl+F headings:
 [ELEMENT ID]
 [CONSTS]
 [UTIL FUNCTIONS]
+[NODE STRUCTURE]
 [SCOPE]
 [MANAGER]
 [LOCALIZATION]
@@ -34,10 +35,12 @@ Ctrl+F headings:
 [LOADING]
 */
 
+// TODO: add room audio support
+
 // [ENGINE ERROR]
 // Custom error object. "cause" is the value that caused the error, "configStack" is the .cfg element stack the error occured in (if any).
 var setupEngineError = function(globalThis) {
-	var ee = function(message,cause,configStack) {
+	var EngineError = function(message,cause,configStack) {
 		this.name = "EngineError";
 		this.message = message;
 		this.cause = cause; 
@@ -48,10 +51,10 @@ var setupEngineError = function(globalThis) {
 		}
 		this.configStack = Array.isArray(configStack) ? configStack : [];
 	};
-	ee.prototype = Error.prototype;
-	ee.prototype.constructor = ee;
+	EngineError.prototype = Error.prototype;
+	EngineError.prototype.constructor = EngineError;
 	Object.defineProperty(globalThis,"EngineError",{
-		value: Object.freeze(ee),
+		value: Object.freeze(EngineError),
 		enumerable: false,
 		writable: false
 	});
@@ -88,10 +91,10 @@ Object.defineProperty(this,"Engine",{
 				}
 				return res;
 			};
-			var _applier = typeof argsApplier === "function" ? argsApplier : _standardApplier;
+			var _applier = _this.defaultFunction(argsApplier,_standardApplier);
 			this.id = id;
 			this.ele = ele;
-			this.selfClosing = typeof selfClosing !== "undefined" ? selfClosing : false;
+			this.selfClosing = _this.defaultBool(selfClosing);
 			this.argsApplier = function(args) {
 				return _applier(args,_hasClassName,_className,_standardApplier);
 			};
@@ -104,6 +107,7 @@ Object.defineProperty(this,"Engine",{
 				var _this2 = this;
 				this.CONFIG_ENGINE_PREFIX = "@";
 				this.LOADING_MSG = "Loading...";
+				this.VOID = "";
 				this.html = Object.freeze(new (function() {
 					var _this3 = this;
 					this.TAG_OPEN = "<";
@@ -156,7 +160,7 @@ Object.defineProperty(this,"Engine",{
 						Object.freeze(new ElementId(_this2.html,"l",_this2.html.LINK,false,undefined,function(args,hasClassName,className,standardApplier) {
 							args = args.split(_this2.localization.BLOCK_ARGS_SEPARATOR);
 							if (args.length === 0) {
-								throw new EngineError("l element in localization must have one argument specifying the URL to link to.",this);
+								throw new EngineError("l element in localization must have one argument specifying the URL to link to.");
 							} else {
 								var res = " "+_this.Consts.html.TARGET_FULL+" "+_this.Consts.html.HREF_OPEN+args[0]+_this.Consts.html.ATTR_CLOSE;
 								args = args.slice(1).join(_this.Consts.localization.BLOCK_ARGS_SEPARATOR);
@@ -164,7 +168,8 @@ Object.defineProperty(this,"Engine",{
 								return res;
 							}
 						})),
-						Object.freeze(new ElementId(_this2.html,"w",_this2.html.WRAPPER))
+						Object.freeze(new ElementId(_this2.html,"w",_this2.html.WRAPPER)),
+						Object.freeze(new ElementId(_this2.html,"r",_this2.VOID))
 					]);
 					this.configKeys = Object.freeze(new (function() {
 						var _this4 = this;
@@ -180,7 +185,9 @@ Object.defineProperty(this,"Engine",{
 						this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"actionExamine";
 						this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"actionInteract";
 						this.QUEST_LOG_EMPTY = _this2.CONFIG_ENGINE_PREFIX+"questLogEmpty";
-						this.IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"imageSource";
+						this.CONCAT_IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatImageSource";
+						this.CONCAT_AUDIO_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatAudioSource";
+						this.CONCAT_ARG_ID = _this2.CONFIG_ENGINE_PREFIX+"argId";
 					})());
 				})());
 				this.definition = Object.freeze(new (function() {
@@ -197,9 +204,14 @@ Object.defineProperty(this,"Engine",{
 					this.IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"source";
 					this.OBJECT_REMOVABLE = _this2.CONFIG_ENGINE_PREFIX+"removable";
 					this.OBJECT_EVT_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"onInteract";
+					this.OBJECT_EVT_FIRST_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"onFirstInteract";
 					this.ROOM_IMAGE = _this2.CONFIG_ENGINE_PREFIX+"image";
 					this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
+					this.ROOM_APPEND_ACTIONS = _this2.CONFIG_ENGINE_PREFIX+"actionsAdd";
+					this.ROOM_OVERRIDE_ACTIONS = _this2.CONFIG_ENGINE_PREFIX+"actionsRemove";
 					this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
+					this.ACTION_DO = _this2.CONFIG_ENGINE_PREFIX+"do";
+					this.ACTION_SUBACTIONS = _this2.CONFIG_ENGINE_PREFIX+"subActions";
 				})());
 				this.execution = Object.freeze(new (function() {
 					var _this3 = this;
@@ -254,6 +266,7 @@ Object.defineProperty(this,"Engine",{
 					this.REGEX_NUMBER = /^[+\-]?\d+(\.\d+)?(e[+\-]?\d+)?$/i;
 					this.REGEX_BOOLEAN = /^(true|false)$/;
 					this.BOOL_TRUE = "true";
+					this.BOOL_FALSE = "false";
 				})());
 				this.io = Object.freeze(new (function() {
 					var _this3 = this;
@@ -269,10 +282,11 @@ Object.defineProperty(this,"Engine",{
 						this.COMMON_ROOT = "common/";
 						this.COMMON_USER = _this4.COMMON_ROOT+_this3.USER_ID+"/";
 						this.COMMON_ENGINE = _this4.COMMON_ROOT+_this3.ENGINE_ID+"/";
-						this.COMMON_OBJECTS = _this4.COMMON_ENGINE+"objects";
-						this.COMMON_ROOMS = _this4.COMMON_ENGINE+"rooms";
-						this.COMMON_GRAPH = _this4.COMMON_ENGINE+"graph";
-						this.COMMON_IMAGES = _this4.COMMON_ENGINE+"images";
+						this.COMMON_OBJECTS = _this4.COMMON_ENGINE+"objects/";
+						this.COMMON_ROOMS = _this4.COMMON_ENGINE+"rooms/";
+						this.COMMON_GRAPH = _this4.COMMON_ENGINE+"graph/";
+						this.COMMON_IMAGES = _this4.COMMON_ENGINE+"images/";
+						this.COMMON_ACTIONS = _this4.COMMON_ENGINE+"actions/";
 						this.STYLE_ROOT = "style/";
 						this.STYLE_USER = _this4.STYLE_ROOT+_this3.USER_ID+"/";
 						this.GFX_ROOT = "gfx/";
@@ -309,12 +323,12 @@ Object.defineProperty(this,"Engine",{
 		};
 		var _parseBool = function(str) {
 			str = str.toLowerCase();
-			if (str === "true") {
+			if (str === _this.Consts.execution.BOOL_TRUE) {
 				return true;
-			} else if (str === "false") {
+			} else if (str === _this.Consts.execution.BOOL_FALSE) {
 				return false;
 			} else {
-				throw new EngineError("Cannot convert value \""+str+"\" to a Boolean.",this);
+				throw new EngineError("Cannot convert value \""+str+"\" to a Boolean.",str);
 			}
 		};
 		var _htmlToNodes = function(html,container) {
@@ -324,31 +338,280 @@ Object.defineProperty(this,"Engine",{
 				container.appendChild(root.childNodes[0]);
 			}
 		};
-		var _scaleImage = function(sourceElement,targetWidth) {
-			var sourceWidth = sourceElement.offsetWidth;
-			var scalingFactor = targetWidth/sourceWidth;
-			var canvas = document.createElement("canvas");
-			var context = canvas.getContext("2d");
-			// Bicubic scaling
-			
-			return canvas;
+		var _getConfigStack = function(node) {
+			var res = [];
+			while (node.parent !== null) { // Excluding the global node
+				res.push(node.name.unescapedString);
+				node = node.parent;
+			}
+			res.reverse();
+			return res;
 		};
-		Object.defineProperty(this,"stripHTML",{
-			value: function(str) {
-				var div = document.createElement("div");
-				div.innerHTML = str;
-				return div.textContent;
-			},
-			writable: false,
-			enumerable: false
-		});
+		var _objectClone = function(obj) {
+			var res = {};
+			for (var key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					res[key] = obj[key];
+				}
+			}
+			return res;
+		};
+		var _objectCountKeys = function(obj) {
+			var res = 0;
+			for (var key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					res++;
+				}
+			}
+			return res;
+		};
+		var _generateTypeOfFunc = function(type) {
+			return function(value) {
+				return typeof value === type;
+			};
+		};
+		var _generateInstanceOfFunc = function(ctor) {
+			return function(value) {
+				return value instanceof ctor;
+			};
+		};
+		var _defaultArg = function(arg,type,default) {
+			return typeof arg === type ? arg : default;
+		};
+		var _defaultFunc = function(value,func,defaultArg,defaultBk) {
+			return func(value) ? value : _defaultArg(defaultArg,defaultBk);
+		};
+		var _defaultTypeOf = function(value,type,defaultArg,defaultBk) {
+			return _defaultFunc(value,_generateTypeOfFunc(type),defaultArg,defaultBk);
+		};
+		this.defaultTemplate = function(value,a,defaultArg,defaultBk) {
+			var res;
+			var type = typeof a;
+			switch (type) {
+				case "string":
+					// Represents a type string
+					res = _defaultTypeOf(value,a,defaultArg,defaultBk);
+					breal;
+				case "function":
+					// Represents a complex function
+					res = _defaultFunc(value,a,defaultArg,defaultBk);
+					break;
+				default:
+					throw new EngineError("Second argument to function defaultTemplate must be of type 'string' or 'function', was '"+type+"'.",a);
+			}
+			return res;
+		};
+		this.defaultAny = function(value,default) {
+			return typeof value !== "undefined" ? value : _defaultArg(default,null);
+		};
+		this.defaultBool = function(bool,default) {
+			return _defaultTypeOf(bool,"boolean",default,false);
+		};
+		this.defaultNumber = function(n,default) {
+			return _defaultTypeOf(n,"number",default,0);
+		};
+		this.defaultString = function(str,default) {
+			return _defaultTypeOf(str,"string",default,"");
+		};
+		this.defaultArray = function(arr,default) {
+			return _defaultFunc(arr,Array.isArray,default,[]);
+		};
+		this.defaultFunction = function(func,default) {
+			return _defaultTypeOf(func,"function",default,function() {
+			});
+		};
+		this.defaultObject = function(obj,default) {
+			return _defaultTypeOf(obj,"object",default,{});
+		};
+		this.defaultInstanceOf = function(obj,ctor,default,fallback) {
+			return _defaultFunc(obj,_generateInstanceOfFunc(ctor),default,_this.defaultAny(fallback));
+		};
+		this.defaultRegex = function(regex,default) {
+			return _this.defaultInstanceOf(regex,RegExp,default,new RegExp());
+		};
+		this.isEngineKey = function(key) {
+			if (key instanceof COM.String) {
+				key = key.unescapedString;
+			}
+			return key.startsWith(_this.Consts.CONFIG_ENGINE_PREFIX);
+		};
+		this.isPermittedKey = function(key,whitelist) {
+			if (key instanceof COM.String) {
+				key = key.unescapedString;
+			}
+			return whitelist.indexOf(key) !== -1;
+		};
+		this.stripHTML = function(str) {
+			var div = document.createElement("div");
+			div.innerHTML = str;
+			return div.textContent;
+		};
+
+		// [NODE STRUCTURE]
+		// Methods to enforce certain config node structures.
+		this.nodeEnforceNoEntries = function(node) {
+			if (node.entriesLength > 0) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 entries, was "+node.entriesLength+".",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceNoAssociations = function(node) {
+			if (node.associationsLength > 0) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 associations, was "+node.associationsLength+".",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceNoChildren = function(node) {
+			if (node.childrenLength > 0) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 children, was "+node.childrenLength+".",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceAtLeastOneEntry = function(node) {
+			if (node.entriesLength < 1) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected at least 1 entry, was "+node.entriesLength+".",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceAtLeastOneChild = function(node) {
+			if (node.childrenLength < 1) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected at least 1 child, was "+node.childrenLength+".",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceHasAssociation = function(node,assoc) {
+			if (!node.hasAssociation(assoc)) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected an association with key '"+assoc+"', but was not present.",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceHasChild = function(node,child) {
+			if (!node.hasChildNamed(child)) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected a child named '"+child+"', but was not present.",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceOnlyTheseAssociations = function(node,whitelist) {
+			throwIfUnseen = _this.defaultBool(throwIfUnseen,true);
+			var notSeen = whitelist.slice(0);
+			node.associations.forEach(function(key) {
+				if (_this.isPermittedKey(key,whitelist)) {
+					notSeen.splice(notSeen.indexOf(key),1);
+				} else {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: association '"+key+"' not permitted in this context.",node,_getConfigStack(node));
+				}
+			});
+			if (notSeen.length > 0) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association(s) ["+notSeen.join()+"].",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceAssociationsComplex = function(node,assocs,throwIfNotInList) {
+			var notSeen = _objectClone(assocs);
+			node.associations.forEach(function(key) {
+				if (!assocs.hasOwnProperty(key)) {
+					if (throwIfNotInList) {
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: association '"+key+"' not permitted in this context.",node,_getConfigStack(node));
+					}
+				} else {
+					delete notSeen[key];
+				}
+			});
+			if (_objectCountKeys(notSeen) > 0) {
+				for (var key in notSeen) {
+					if (notSeen.hasOwnProperty(key) && !notSeen[key]) {
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association '"+notSeen[key]+"'.",node,_getConfigStack(node));
+					}
+				}
+			}
+		};
+		this.nodeEnforceOnlyTheseChildren = function(node,whitelist) {
+			throwIfUnseen = _this.defaultBool(throwIfUnseen,true);
+			var notSeen = whitelist.slice(0);
+			node.children.forEach(function(child) {
+				if (_this.isPermittedKey(child.name,whitelist)) {
+					notSeen.splice(notSeen.indexOf(child.name.unescapedString),1);
+				} else {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: child '"+child.name.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+				}
+			});
+			if (notSeen.length > 0) {
+				throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required child(ren) ["+notSeen.join()+"].",node,_getConfigStack(node));
+			}
+		};
+		this.nodeEnforceOnlyOneOfTheseChildren = function(node,whitelist) {
+			var seen = [];
+			node.children.forEach(function(child) {
+				if (!_this.isPermittedKey(child.name,whitelist)) {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: child '"+child.name.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+				} else if (seen.indexOf(child.name.unescapedString) === -1) {
+					seen.push(child.name.unescapedString);
+				} else {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: duplicate child '"+child.name.unescapedString+"'.",node,_getConfigStack(node));
+				}
+			});
+		};
+		this.nodeEnforceMutexChildren = function(node,whitelist) {
+			var seen = false;
+			var seenNode;
+			node.children.forEach(function(child) {
+				if (_this.isPermittedKey(child.name)) {
+					if (seen) {
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: child nodes '"+child.name.unescapedString+"' and '"+seenNode.name.unescapedString+"' are mutually exclusive.",node,_getConfigStack(node));
+					} else {
+						seen = true;
+						seenNode = child;
+					}
+				}
+			});
+		};
+		this.nodeEnforceChildrenComplex = function(node,children,throwIfNotInList,throwIfDuplicate) {
+			throwIfDuplicate = _this.defaultBool(throwIfDuplicate,true);
+			var notSeen = _objectClone(children);
+			node.children.forEach(function(child) {
+				if (!children.hasOwnProperty(child.name.unescapedString)) {
+					if (throwIfNotInList) {
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: child node '"+child.name.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+					}
+				} else if (notSeen.hasOwnProperty(child.name.unescapedString)) {
+					delete notSeen[child.name.unescapedString];
+				} else if (throwIfDuplicate) {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: child node '"+child.name.unescapedString+"' appears more than once.",node,_getConfigStack(node));
+				}
+			});
+			if (_objectCountKeys(notSeen) > 0) {
+				for (var key in notSeen) {
+					if (notSeen.hasOwnProperty(key) && !notSeen[key]) {
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association '"+notSeen[key]+"'.",node,_getConfigStack(node));
+					}
+				}
+			}
+		};
+		this.nodeEnforceNoEngineEntries = function(node,whitelist) {
+			whitelist = _this.defaultArray(whitelist);
+			node.entries.forEach(function(entry) {
+				if (_isEngineKey(entry) && !_this.isPermittedKey(entry,whitelist)) {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: engine-prefixed entry '"+entry.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+				}
+			});
+		};
+		this.nodeEnforceNoEngineAssociations = function(node,whitelist) {
+			whitelist = _this.defaultArray(whitelist);
+			node.associations.forEach(function(key) {
+				if (_isEngineKey(key) && !_this.isPermittedKey(entry,whitelist)) {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: engine-prefixed association '"+key.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+				}
+			});
+		};
+		this.nodeEnforceNoEngineChildren = function(node,whitelist) {
+			whitelist = _this.defaultArray(whitelist);
+			node.children.forEach(function(child) {
+				if (_isEngineKey(child.name) && !_this.isPermittedKey(entry,whitelist)) {
+					throw new EngineError("Node '"+node.name.unescapedString+"' format error: engine-prefixed child node '"+child.name.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
+				}
+			});
+		};
 
 		// [SCOPE]
 		// State scope object. Controls access to state variables.
-		var Scope = function(name) {
+		var Scope = function(name,engineAssocWhitelist,engineChildWhitelist) {
 			var _this2 = this;
 			var _vars = {};
 			var _children = [];
+			var _assocWhitelist = this.defaultArray(engineAssocWhitelist);
+			var _childWhitelist = this.defaultArray(engineChildWhitelist);
 			var _parent = null;
 
 			var _defineMethod = function(name,func) {
@@ -409,6 +672,9 @@ Object.defineProperty(this,"Engine",{
 				return _vars[v];
 			});
 			_defineMethod("_setVar",function(v,value) {
+				if (_this.isEngineKey(v) && !_this.isPermittedKey(v,_assocWhitelist)) {
+					throw new EngineError("Engine variable '"+v+"' is not permitted in this context.",v);
+				}
 				_vars[v] = _parseVarValue(value);
 			});
 			_defineMethod("hasVariable",function(v) {
@@ -423,14 +689,14 @@ Object.defineProperty(this,"Engine",{
 				if (scope !== null) {
 					scope._setVar(v,value);
 				} else {
-					throw new EngineError("Variable '"+v+"' is undefined.",this);
+					throw new EngineError("Variable '"+v+"' is undefined.",v);
 				}
 			});
 			_defineMethod("defineVariable",function(v,value) {
 				_this2._setVar(v,value);
 			});
 			_defineMethod("hasChild",function(child,deep) {
-				deep = typeof deep !== "undefined" ? deep : false;
+				deep = _this.defaultBool(deep);
 				var res;
 				if (_children.indexOf(child) !== -1) {
 					res = true;
@@ -451,7 +717,7 @@ Object.defineProperty(this,"Engine",{
 				return typeof _this2.getChildNamed(name,deep) !== "undefined";
 			});
 			_defineMethod("getChildNamed",function(name,deep) {
-				deep = typeof deep !== "undefined" ? deep : false;
+				deep = _this.defaultBool(deep);
 				var res;
 				var child;
 				for (var i = 0; i < _children.length; i++) {
@@ -469,6 +735,9 @@ Object.defineProperty(this,"Engine",{
 				return res;
 			});
 			_defineMethod("addChild",function(child) {
+				if (_this.isEngineKey(child.name) && !_this.isPermittedKey(child.name,_childWhitelist)) {
+					throw new EngineError("Child '"+child.name.unescapedString+"' not permitted in this context.");
+				}
 				child._setParent(_this2);
 				_children.push(child);
 			});
@@ -490,7 +759,7 @@ Object.defineProperty(this,"Engine",{
 			});
 		};
 
-		// [MAGANER]
+		// [MANAGER]
 		// Load manager object. Controls the display of load percentages and errors, as well as what to do when loading is done.
 		var LoadCounter = function(max,container) {
 			var _loaded = 0;
@@ -517,11 +786,12 @@ Object.defineProperty(this,"Engine",{
 				}
 				var stack = "";
 				if (Array.isArray(e.configStack)) {
-					e.configStack.reverse();
+					//e.configStack.reverse();
 					stack = e.configStack.join("/");
 					msg += "\nConfig stack: "+stack;
 				}
 				console.error(msg);
+				console.info("Cause:",e.cause);
 				var toPush = " "+e.message;
 				if (stack !== "") {
 					toPush += " ("+stack+")";
@@ -564,7 +834,67 @@ Object.defineProperty(this,"Engine",{
 
 				var _strings = {};
 				var _groups = {};
+				var _validNgStrings = [];
+				var _validNgGroups = [];
+				var _externLocked = false;
 
+				_defineMethod("defineNgString",function(key) {
+					if (_externLocked) {
+						throw new EngineError("User scripts cannot define engine strings.",_externLocked);
+					}
+					_validNgStrings.push(key);
+				});
+				_defineMethod("defineNgGroup",function(key) {
+					if (_externLocked) {
+						throw new EngineError("User scripts cannot define engine groups.",_externLocked);
+					}
+					_validNgGroups.push(key);
+				});
+				_defineMethod("externLock",function() {
+					_externLocked = true;
+				});
+				_defineMethod("isAllowedNgString",function(key) {
+					if (!_this.isEngineKey(key)) {
+						throw new EngineError("Key '"+key+"' is not a valid engine key.",key);
+					}
+					return _this.isPermittedKey(key,_validNgStrings);
+				});
+				_defineMethod("isAllowedNgGroup",function(key) {
+					if (!_this.isEngineKey(key)) {
+						throw new EngineError("Key '"+key+"' is not a valid engine key.",key);
+					}
+					return _this.isPermittedKey(key,_validNgGroups);
+				});
+				_defineMethod("validateNgVars",function() {
+					for (var i = 0; i < _validNgStrings.length; i++) {
+						if (!_this2.hasString(_validNgStrings[i])) {
+							throw new EngineError("Localization missing required association '"+_validNgStrings[i]+"'.",_this2);
+						}
+					}
+					for (var i = 0; i < _validNgGroups.length; i++) {
+						if (!_this2.hasGroup(_validNgGroups[i])) {
+							throw new EngineError("Localization missing required child '"+_validNgGroups[i]+"'.",_this2);
+						}
+					}
+				});
+				_defineMethod("forEachString",function(callback) {
+					var value;
+					for (var key in _strings) {
+						if (_strings.hasOwnProperty(key)) {
+							value = _strings[key];
+							callback(key,value,_this.isEngineKey(key));
+						}
+					}
+				});
+				_defineMethod("forEachGroup",function(callback) {
+					var value;
+					for (var key in _groups) {
+						if (_groups.hasOwnProperty(key)) {
+							value = _groups[key];
+							callback(key,value,_this2.isEngikeKey(key));
+						}
+					}
+				});
 				_defineMethod("hasString",function(key) {
 					return _strings.hasOwnProperty(key);
 				});
@@ -572,6 +902,11 @@ Object.defineProperty(this,"Engine",{
 					return _this2.hasString(key) ? _strings[key] : undefined;
 				});
 				_defineMethod("setString",function(key,value) {
+					if (_this2.isEngineKey(key)) {
+						if (!_this2.isAllowedNgString(key)) {
+							throw new EngineError("Cannot define localization string with key '"+key+"': that is not a permitted engine key for strings.",key);
+						}
+					}
 					var res = "";
 					var openBracket = false;
 					var inOpenBlock = false;
@@ -598,14 +933,14 @@ Object.defineProperty(this,"Engine",{
 							id = _this.Consts.localization.ID_MAP[i];
 							if (block.id === id.id) {
 								if (ignoreSelfClosing && id.selfClosing) {
-									throw new EngineError(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.",this);
+									throw new EngineError(context[0].toUpperCase()+context.substring(1)+" tag "+block.id+" in a localization file cannot be closed because it is self-closing.",block.id);
 								} else {
 									callback(id);
 									return;
 								}
 							}
 						}
-						throw new EngineError("Unknown "+context+" tag "+_this.Consts.localization.BLOCK_OPEN_PREFIX+block.id+" in a localization file.",this);
+						throw new EngineError("Unknown "+context+" tag "+_this.Consts.localization.BLOCK_OPEN_PREFIX+block.id+" in a localization file.",block.id);
 					};
 					value.forEach(function(c) {
 						if (inOpenBlock) {
@@ -617,11 +952,13 @@ Object.defineProperty(this,"Engine",{
 								inOpenBlock = false;
 								inArgs = false;
 								_findId("opening",function(id) {
-									res += _this.Consts.html.TAG_OPEN+id.ele+_formatArgs(id);
-									if (id.selfClosing) {
-										res += _this.Consts.html.TAG_SELF_CLOSING;
-									} else {
-										res += _this.Consts.html.TAG_CLOSE;
+									if (id.ele !== _this.Consts.VOID) {
+										res += _this.Consts.html.TAG_OPEN+id.ele+_formatArgs(id);
+										if (id.selfClosing) {
+											res += _this.Consts.html.TAG_SELF_CLOSING;
+										} else {
+											res += _this.Consts.html.TAG_CLOSE;
+										}
 									}
 								},false);
 							} else {
@@ -633,7 +970,9 @@ Object.defineProperty(this,"Engine",{
 							} else if (c.char === _this.Consts.localization.CLOSE_BLOCK) {
 								inCloseBlock = false;
 								_findId("closing",function(id) {
-									res += _this.Consts.html.CLOSE_TAG_PREFIX+id.ele+_this.Consts.html.TAG_CLOSE;
+									if (id.ele !== _this.Consts.VOID) {
+										res += _this.Consts.html.CLOSE_TAG_PREFIX+id.ele+_this.Consts.html.TAG_CLOSE;
+									}
 								},true);
 							} else {
 								_pushChar(c.char);
@@ -673,12 +1012,40 @@ Object.defineProperty(this,"Engine",{
 					return _this2.hasGroup(key) ? _groups[key] : undefined;
 				});
 				_defineMethod("setGroup",function(key,value) {
+					if (_this2.isEngineKey(key)) {
+						if (!_this2.isAllowedNgGroup(key)) {
+							throw new EngineError("Cannot define localization group with key '"+key+"': that is not a permitted engine key for groups.",key);
+						}
+					}
 					_groups[key] = value;
 				});
 			})(),
 			writable: false,
 			enumerable: true
 		});
+		var LocalizedConcat = function(id,node) {
+			_this.nodeEnforceNoChildren(node);
+			_this.nodeEnforceAtLeastOneEntry(node);
+			_this.nodeEnforceOnlyTheseAssociations(node,[_this.Consts.localization.configKeys.CONCAT_ARG_ID]);
+
+			var _this2 = this;
+			var _argId = node.getAssociation(_this.Consts.localization.configKeys.CONCAT_ARG_ID).unescapedString;
+			var _keys = node.entries.map(function(entry) {
+				return entry.unescapedString;
+			});
+			this.id = id;
+			this.invoke = function(arg) {
+				var res = "";
+				_keys.forEach(function(key) {
+					if (key === _argId) {
+						res += arg;
+					} else {
+						res += _this.LocalizationMap.getString(key);
+					}
+				});
+				return res;
+			};
+		};
 
 		// [COMMANDS - ROOT]
 		// Engine command root object. Controls adding child commands, exception wrapping, enforcing conditions on nodes, and execution.
@@ -691,7 +1058,13 @@ Object.defineProperty(this,"Engine",{
 				try {
 					callback();
 				} catch (e) {
-					e.configStack.push(this.nodeName);
+					if (e instanceof EngineError) {
+						if (e.configStack.length === 0) {
+							e.configStack = _getConfigStack(node);
+						}
+					} else {
+						e = new EngineError(e.message,this,_getConfigStack(node));
+					}
 					throw e;
 				}
 			};
@@ -703,74 +1076,43 @@ Object.defineProperty(this,"Engine",{
 					callback(_commands[i]);
 				}
 			};
+
 			this.enforceNoEntries = function(node) {
-				if (node.entriesLength > 0) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 entries, was "+node.entriesLength+".",this);
-				}
+				_this.nodeEnforceNoEntries(node);
 			};
 			this.enforceNoAssociations = function(node) {
-				if (node.associationsLength > 0) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 associations, was "+node.associationsLength+".",this);
-				}
+				_this.nodeEnforceNoAssociations(node);
 			};
 			this.enforceNoChildren = function(node) {
-				if (node.childrenLength > 0) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected exactly 0 children, was "+node.childrenLength+".",this);
-				}
+				_this.nodeEnforceNoChildren(node);
 			};
 			this.enforceAtLeastOneEntry = function(node) {
-				if (node.entriesLength < 1) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected at least 1 entry, was "+node.entriesLength+".",this);
-				}
+				_this.nodeEnforceAtLeastOneEntry(node);
 			};
 			this.enforceAtLeastOneChild = function(node) {
-				if (node.childrenLength < 1) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: expected at least 1 child, was "+node.childrenLength+".",this);
-				}
+				_this.nodeEnforceAtLeastOneChild(node);
+			};
+			this.enforceHasAssociation = function(node,assoc) {
+				_this.nodeEnforceHasAssociation(node,assoc);
+			};
+			this.enforceHasChild = function(node,child) {
+				_this.nodeEnforceHasChild(nodechild);
 			};
 			this.enforceOnlyTheseAssociations = function(node,whitelist) {
-				var notSeen = whitelist.slice(0);
-				node.associations.forEach(function(key) {
-					if (whitelist.indexOf(key) === -1) {
-						throw new EngineError("Node '"+node.name.unescapedString+"' format error: association '"+key+"' not permitted in this context.",this);
-					} else {
-						notSeen.splice(notSeen.indexOf(key),1);
-					}
-				});
-				if (notSeen.length > 0) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association(s) ["+notSeen.join()+"].",this);
-				}
+				_this.nodeEnforceOnlyTheseAssociations(node,whitelist);
 			};
 			this.enforceOnlyTheseChildren = function(node,whitelist) {
-				var notSeen = whitelist.slice(0);
-				node.children.forEach(function(child) {
-					if (whitelist.indexOf(child.name.unescapedString) === -1) {
-						throw new EngineError("Node '"+node.name.unescapedString+"' format error: child '"+child.name.unescapedString+"' not permitted in this context.",this);
-					} else {
-						notSeen.splice(notSeen.indexOf(child.name.unescapedString),1);
-					}
-				});
-				if (notSeen.length > 0) {
-					throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required child(ren) ["+notSeen.join()+"].",this);
-				}
+				_this.nodeEnforceOnlyTheseChildren(node,whitelist);
 			};
 			this.enforceOnlyOneOfTheseChildren = function(node,whitelist) {
-				var seen = [];
-				node.children.forEach(function(child) {
-					if (whitelist.indexOf(child.name.unescapedString) === -1) {
-						throw new EngineError("Node '"+node.name.unescapedString+"' format error: child '"+child.name.unescapedString+"' not permitted in this context.",this);
-					} else if (seen.indexOf(child.name.unescapedString) === -1) {
-						seen.push(child.name.unescapedString);
-					} else {
-						throw new EngineError("Node '"+node.name.unescapedString+"' format error: duplicate child '"+child.name.unescapedString+"'.",this);
-					}
-				});
+				_this.nodeEnforceOnlyOneOfTheseChildren(node,whitelist);
 			};
+
 			this.internalExecute = function(context) {
-				context = typeof context !== "undefined" ? context : {
+				context = _this.defaultObject(context,{
 					stack: new EngineCommand.ScopeStack(_state),
 					logBroken: false
-				};
+				});
 				this.forEach(function(cmd) {
 					cmd.execute(context);
 				});
@@ -826,8 +1168,8 @@ Object.defineProperty(this,"Engine",{
 				return res;
 			};
 			this.attemptScoping = function(child,name) {
-				if (name.startsWith(_this.Consts.CONFIG_ENGINE_PREFIX)) {
-					throw new EngineError("Unexpected engine-defined child \""+name+"\".",this);
+				if (_this.isEngineKey(name)) {
+					throw new EngineError("Unexpected engine-defined child \""+name+"\".",name,_getConfigStack(child));
 				} else {
 					return new ScopingCommand(_this2,child);
 				}
@@ -888,7 +1230,7 @@ Object.defineProperty(this,"Engine",{
 				return _stack.pop();
 			};
 		};
-		EngineCommand.NO_OP = new EngineCommand(null);
+		EngineCommand.NO_OP = new EngineCommand();
 		EngineCommand.prototype.constructor = EngineCommand;
 		// [COMMANDS - SCOPING]
 		// Controls moving the scoping stack into a child scope.
@@ -904,7 +1246,7 @@ Object.defineProperty(this,"Engine",{
 					context.stack.pop();
 					return res;
 				} else {
-					throw new EngineError("Scope '"+context.stack.peek().name+"' does not have a child '"+_this2.nodeName+"'.",this);
+					throw new EngineError("Scope '"+context.stack.peek().name.unescapedString+"' does not have a child '"+_this2.nodeName+"'.",context.stack.peek(),_getConfigStack(node));
 				}
 			};
 		};
@@ -953,7 +1295,7 @@ Object.defineProperty(this,"Engine",{
 				if (typeof _to !== "undefined") {
 					_to = _to.unescapedString;
 				} else {
-					throw new EngineError(_this.Consts.execution.ACTION_TELEPORT+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",_this2);
+					throw new EngineError(_this.Consts.execution.ACTION_TELEPORT+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",node,_getConfigStack(node));
 				}
 			});
 		};
@@ -975,7 +1317,7 @@ Object.defineProperty(this,"Engine",{
 				if (typeof _to !== "undefined") {
 					_to = _to.unescapedString;
 				} else {
-					throw new EngineError(_this.Consts.execution.ACTION_MOVE+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",_this2);
+					throw new EngineError(_this.Consts.execution.ACTION_MOVE+": Required association '"+_this.Consts.execution.ACTION_MOVE_TO+"' is undefined.",node,_getConfigStack(node));
 				}
 			});
 		};
@@ -995,7 +1337,7 @@ Object.defineProperty(this,"Engine",{
 				if (typeof _object !== "undefined") {
 					_object = _object.unescapedString;
 				} else {
-					throw new EngineError(_this.Consts.execution.ACTION_EXAMINE+": Required association '"+_this.Consts.execution.ACTION_EXAMINE_OBJECT+"' is undefined.",this);
+					throw new EngineError(_this.Consts.execution.ACTION_EXAMINE+": Required association '"+_this.Consts.execution.ACTION_EXAMINE_OBJECT+"' is undefined.",node,_getConfigStack(node));
 				}
 			});
 		};
@@ -1017,7 +1359,7 @@ Object.defineProperty(this,"Engine",{
 				if (typeof _object !== "undefined") {
 					_object = _object.unescapedString;
 				} else {
-					throw new EngineError(_this.Consts.execution.ACTION_INTERACT+": Required association '"+_this.Consts.execution.ACTION_INTERACT_OBJECT+"' is undefined.",this);
+					throw new EngineError(_this.Consts.execution.ACTION_INTERACT+": Required association '"+_this.Consts.execution.ACTION_INTERACT_OBJECT+"' is undefined.",node,_getConfigStack(node));
 				}
 			});
 		};
@@ -1030,9 +1372,9 @@ Object.defineProperty(this,"Engine",{
 			var _strings = [];
 			var _log = function(context,id) {
 				if (context.logBroken) {
-					_logPushNoBreak(id);
+					_this.logPushNoBreak(id);
 				} else {
-					_logPush(id);
+					_this.logPush(id);
 				}
 			};
 			this.internalExecute = function(context) {
@@ -1071,9 +1413,9 @@ Object.defineProperty(this,"Engine",{
 				_this2.nodeName = node.name.unescapedString;
 				_this2.enforceNoEntries(node);
 				_this2.enforceNoAssociations(node);
-				var allowedChildren = [_this.Consts.execution.FLOW_CONDITION,_this.Consts.execution.FLOW_THEN,_this.Consts.execution.FLOW_ELSE];
-				_this2.enforceOnlyTheseChildren(node,allowedChildren);
-				_this2.enforceOnlyOneOfTheseChildren(node,allowedChildren);
+				_this2.enforceHasChild(node,_this.Consts.execution.FLOW_CONDITION);
+				_this2.enforceHasChild(node,_this.Consts.execution.FLOW_THEN);
+				_this2.enforceOnlyOneOfTheseChildren(node,[_this.Consts.execution.FLOW_CONDITION,_this.Consts.execution.FLOW_THEN,_this.Consts.execution.FLOW_ELSE]);
 				_limit = new AndCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_CONDITION));
 				_then = new EngineCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_THEN));
 				_else = new EngineCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
@@ -1106,7 +1448,7 @@ Object.defineProperty(this,"Engine",{
 					}
 					context.stack.peek().setVariable(_out,res.toString());
 				} else {
-					throw new EngineError(_this2.nodeName+": no values to perform operation on.",this);
+					throw new EngineError(_this2.nodeName+": no values to perform operation on.",this,_getConfigStack(node));
 				}
 			};
 			this.ngCatch(function() {
@@ -1278,7 +1620,7 @@ Object.defineProperty(this,"Engine",{
 					}
 					return res;
 				} else {
-					throw new EngineError(this.nodeName+": no values to compare.",this);
+					throw new EngineError(this.nodeName+": no values to compare.",this,_getConfigStack(node));
 				}
 			};
 			this.ngCatch(function() {
@@ -1559,7 +1901,6 @@ Object.defineProperty(this,"Engine",{
 				context.drawImage(_img,this.x,this.y,this.width,this.height,0,0,targetWidth,targetHeight);
 			};
 		};
-		
 		var MipmappedImage = function(source) {
 			var _img = document.createElement("img");
 			_img.className = "offscreen";
@@ -1592,11 +1933,11 @@ Object.defineProperty(this,"Engine",{
 				}
 				_loaded = true;
 			});
-			var _applyMipmap = function(container,source,firstCall) {
+			var _applyMipmap = function(container,artist,source,firstCall) {
 				var a = document.createElement("a");
 					a.target = "_blank";
 					a.href = source;
-					a.setAttribute("title",_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.IMAGE_SOURCE)));
+					a.setAttribute("title",_this.stripHTML(_this.LocalizationMap.getGroup(_this.Consts.localization.configKeys.CONCAT_IMAGE_SOURCE).invoke(_this.LocalizationMap.getString(artist))));
 					var canvas = document.createElement("canvas");
 						canvas.width = 1;
 						canvas.height = 10000; // So that clientWidth accounts for a potential scroll bar
@@ -1612,18 +1953,18 @@ Object.defineProperty(this,"Engine",{
 				return a;
 			};
 
-			this.draw = function(container,source) {
+			this.draw = function(container,artist,source) {
 				return new Promise(function(resolve,reject) {
 					if (_loaded) {
-						resolve(_applyMipmap(container,source));
+						resolve(_applyMipmap(container,artist,source));
 					} else {
 						_img.addEventListener("load",function() {
 							if (_loaded) {
-								resolve(_applyMipmap(container,source));
+								resolve(_applyMipmap(container,artist,source));
 							} else {
 								// Guard against this listener firing before component creation listener
 								setTimeout(function() {
-									resolve(_applyMipmap(container,source));
+									resolve(_applyMipmap(container,artist,source));
 								},0);
 							}
 						});
@@ -1637,6 +1978,9 @@ Object.defineProperty(this,"Engine",{
 		var ImageReference = function(id,node) {
 			var _this2 = this;
 			if (typeof id !== "undefined") {
+				_this.nodeEnforceNoEntries(node);
+				_this.nodeEnforceNoChildren(node);
+				_this.nodeEnforceOnlyTheseAssociations(node,[_this.Consts.definition.IMAGE_ID,_this.Consts.definition.IMAGE_ARTIST,_this.Consts.definition.IMAGE_SOURCE]);
 				this.id = id;
 				this.filePath = _this.Consts.io.paths.GFX_USER+node.name.unescapedString;
 				this.artist = node.getAssociation(_this.Consts.definition.IMAGE_ARTIST).unescapedString;
@@ -1645,28 +1989,104 @@ Object.defineProperty(this,"Engine",{
 				this.isAlpha = false;
 			}
 			this.display = function() {
-				_image.textContent = "";
+				_imageEle.textContent = "";
 				if (!this.isAlpha) {
-					this.mipmap.draw(_image,this.source);
+					this.mipmap.draw(_imageEle,this.artist,this.source);
 				}
 			};
 		};
 		var ObjectReference = function(id,node) {
+			_this.nodeEnforceNoEntries(node);
+			var assocs = {};
+			assocs[_this.Consts.definition.NAME] = false;
+			assocs[_this.Consts.definition.DESC] = false;
+			assocs[_this.Consts.definition.OBJECT_REMOVABLE] = true;
+			_this.nodeEnforceAssociationsComplex(node,assocs,true);
+			var children = {};
+			children[_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT] = true;
+			children[_this.Consts.definition.OBJECT_EVT_INTERACT] = true;
+			_this.nodeEnforceChildrenComplex(node,children,true);
+
 			var _this2 = this;
+			var _firstInteract = true;
+			var _hasFirstInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
+			var _hasOngoingInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT);
 			this.id = id;
 			this.name = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
 			this.desc = node.getAssociation(_this.Consts.definition.DESC).unescapedString;
 			this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).unescapedString) : false;
-			this.interactable = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
-			this.onInteract = this.interactable ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
+			this.onInteract = _hasOngoingInteract ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
+			this.onFirstInteract = _hasFirstInteract ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT)) : EngineCommand.NO_OP;
+			this.interact = function() {
+				if (this.interactable) {
+					if (_firstInteract) {
+						_firstInteract = false;
+						if (_hasFirstInteract) {
+							this.onFirstInteract.execute();
+						} else {
+							this.onInteract.execute();
+						}
+					} else {
+						this.onInteract.execute();
+					}
+				} else {
+					throw new EngineError("Object '"+this.id+"' is not interactable.",this,_getConfigStack(node));
+				}
+			};
+			Object.defineProperty(this,"interactable",{
+				get: function() {
+					return _firstInteract ? _hasFirstInteract || _hasOngoingInteract : _hasOngoingInteract;
+				},
+				enumerable: true
+			});
+		};
+		var Action = function(id,node) {
+			_this.nodeEnforceNoEntries(node);
+			_this.nodeEnforceNoAssociations(node);
+			var children = [_this.Consts.definition.ACTION_DO,_this.Consts.definition.ACTION_SUBACTIONS];
+			var childrenObj = {};
+			for (var i = 0; i < children.length; i++) {
+				childrenObj[children[i]] = true;
+			}
+			_this.nodeEnforceChildrenComplex(node,childrenObj,true);
+			_this.nodeEnforceMutexChildren(node,children);
+
+			var _this2 = this;
+			this.id = id;
+			this.isFinalAction = node.hasChildNamed(_this.Consts.definition.ACTION_DO);
+			this.command = this.isFinalAction ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.ACTION_DO)) : null;
+			this.subActions = null;
+			if (!this.isFinalAction) {
+				var subDef = node.getChildNamed(_this.Consts.definition.ACTION_SUBACTIONS);
+				_this.nodeEnforceNoAssociations(subDef);
+				_this.nodeEnforceNoChildren(subDef);
+				_this.nodeEnforceAtLeastOneEntry(subDef);
+				this.subActions = subDef.entries.map(function(entry) {
+					return entry.unescapedString;
+				});
+			}
 		};
 		var Room = function(id,node) {
+			_this.nodeEnforceNoEntries(node);
+			var assocs = {};
+			assocs[_this.Consts.definition.NAME] = false;
+			assocs[_this.Consts.definition.DESC] = false;
+			assocs[_this.Consts.definition.ROOM_IMAGE] = true;
+			_this.nodeEnforceAssociationsComplex(node,assocs,true);
+			var children = {};
+			children[_this.Consts.definition.ROOM_CONTENTS] = true;
+			children[_this.Consts.definition.ROOM_APPEND_ACTIONS] = true;
+			children[_this.Consts.definition.ROOM_OVERRIDE_ACTIONS] = true;
+			_this.nodeEnforceChildrenComplex(node,children,true);
+
 			var _this2 = this;
 			this.id = id;
 			this.name = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
 			this.desc = node.getAssociation(_this.Consts.definition.DESC).unescapedString;
 			this.imageId = node.hasAssociation(_this.Consts.definition.ROOM_IMAGE) ? node.getAssociation(_this.Consts.definition.ROOM_IMAGE).unescapedString : null;
+			//this.audioId // TODO
 			this.contents = [];
+			this.actions = [_this.Consts.execution.ACTION_MOVE,_this.Consts.execution.ACTION_EXAMINE,_this.Consts.execution.ACTION_INTERACT];
 			this.getImage = function() {
 				return this.imageId !== null ? _images[this.imageId] : _imageAlpha;
 			};
@@ -1676,8 +2096,30 @@ Object.defineProperty(this,"Engine",{
 					if (_objects.hasOwnProperty(entry.unescapedString)) {
 						_this2.contents.push(_objects[entry.unescapedString]);
 					} else {
-						throw new EngineError("Object \""+entry.unescapedString+"\" is undefined.",this);
+						throw new EngineError("Object \""+entry.unescapedString+"\" is undefined.",entry.unescapedString,_getConfigStack(node));
 					}
+				});
+			}
+			if (node.hasChildNamed(_this.Consts.definition.ROOM_REMOVE_ACTIONS)) {
+				var rm = node.getChildNamed(_this.Consts.definition.ROOM_REMOVE_ACTIONS);
+				_this.nodeEnforceNoAssociations(rm);
+				_this.nodeEnforceNoChildren(rm);
+				_this.nodeEnforceAtLeastOneEntry(rm);
+				rm.entries.forEach(function(entry) {
+					var index = _this2.actions.indexOf(entry.unescapedString);
+					if (index === -1) {
+						throw new EngineEror("Cannot remove non-existant action '"+entry.unescapedString+"' from room '"+_this2.id+"'.",entry.unescapedString,_getConfigStack(rm));
+					}
+					_this2.actions.splice(index,1);
+				});
+			}
+			if (node.hasChildNamed(_this.Consts.definition.ROOM_APPEND_ACTIONS)) {
+				var add = node.getChildNamed(_this.Consts.definition.ROOM_APPEND_ACTIONS);
+				_this.nodeEnforceNoAssociations(add);
+				_this.nodeEnforceNoChildren(add);
+				_this.nodeEnforceAtLeastOneEntry(add);
+				add.entries.forEach(function(entry) {
+					_this2.actions.push(entry.unescapedString);
 				});
 			}
 		};
@@ -1703,53 +2145,71 @@ Object.defineProperty(this,"Engine",{
 			};
 			this.push = function(edge) {
 				if (typeof this.getEdge(edge) !== "undefined") {
-					throw new EngineError("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.",this);
+					throw new EngineError("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.",edge);
 				} else {
 					_arr.push(edge);
 				}
 			};
 		};
 		var GraphEdge = function(from,to,node) {
+			_this.nodeEnforceNoEntries(node);
+			_this.nodeEnforceOnlyTheseAssociations(node,[_this.Consts.definition.GRAPH_ORIGIN,_this.Consts.definition.GRAPH_DESTINATION]);
+			var children = {};
+			children[_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL] = true;
+			children[_this.Consts.definition.GRAPH_EVT_TRAVERSAL] = true;
+			_this.nodeEnforceChildrenComplex(node,children,true);
+
 			var _firstTraversal = true;
+			var _hasFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL);
+			var _hasOngoingTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL);
 			this.from = _rooms[from.unescapedString];
 			this.to = _rooms[to.unescapedString];
-			this.onFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
-			this.onTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL) ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.onFirstTraversal = _hasFirstTraversal ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.onTraversal = _hasOngoingTraversal ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
 			this.traverse = function() {
 				_updateLocation(to);
 				if (_firstTraversal) {
-					this.onFirstTraversal.execute();
 					_firstTraversal = false;
+					if (_this.hasFirstTraversal) {
+						this.onFirstTraversal.execute();
+					} else {
+						this.onTraversal.execute();
+					}
+				} else {
+					this.onTraversal.execute();
 				}
-				this.onTraversal.execute();
 			};
 		};
 
 		// [VARS]
 		// Variables containing data that everyone needs to know about.
 		// CFG
-		var _roomsMap;
-		var _objectsMap;
-		var _graphMap;
 		var _state;
 		var _images;
 		var _rooms;
 		var _objects;
 		var _graph;
+		var _actions;
 		var _imageAlpha = new ImageReference();
 		_imageAlpha.isAlpha = true;
 		_imageAlpha = Object.freeze(_imageAlpha);
 		// HTML
 		var _container;
 		var _containerContent;
-		var _log;
-		var _image;
-		var _inv;
-		var _actions;
-		var _quests;
+		var _logEle;
+		var _imageEle;
+		var _invEle;
+		var _actionsEle;
+		var _questsEle;
 
 		// [STATE WRAPPERS]
 		// Aliasing some things to reduce the amount of code being written.
+		Object.defineProperty(this,"state",{
+			get: function() {
+				return _state;
+			},
+			enumerable: true
+		});
 		var _getCurrentRoom = function() {
 			return _rooms[_state.getVariable(_this.Consts.definition.STATE_LOCATION)];
 		};
@@ -1763,7 +2223,7 @@ Object.defineProperty(this,"Engine",{
 			if (_rooms.hasOwnProperty(to)) {
 				_updateLocation(to);
 			} else {
-				throw new EngineError("Unable to teleport to room '"+to+"': no such room exists.",this);
+				throw new EngineError("Unable to teleport to room '"+to+"': no such room exists.",to);
 			}
 		};
 		var _movePlayer = function(to) {
@@ -1772,23 +2232,23 @@ Object.defineProperty(this,"Engine",{
 				if (typeof edge !== "undefined") {
 					edge.traverse();
 				} else {
-					throw new EngineError("Unable to move to room '"+to+"': current location +'"+_getCurrentLocation().id+"' and destination '"+to+"' have no direct connection.");
+					throw new EngineError("Unable to move to room '"+to+"': current location +'"+_getCurrentLocation().id+"' and destination '"+to+"' have no direct connection.",to);
 				}
 			} else {
-				throw new EngineError("Unable to move to room '"+to+"': no such room exists.",this);
+				throw new EngineError("Unable to move to room '"+to+"': no such room exists.",to);
 			}
 		};
 		var _examineObject = function(id,breakFirst) {
-			breakFirst = typeof breakFirst !== "undefined" ? breakFirst : false;
+			breakFirst = _this.defaultBool(breakFirst);
 			if (_objects.hasOwnProperty(id)) {
 				var obj = _objects[id];
 				if (breakFirst) {
-					_logPush(obj.desc);
+					_this.logPush(obj.desc);
 				} else {
-					_logPushNoBreak(obj.desc);
+					_this.logPushNoBreak(obj.desc);
 				}
 			} else {
-				throw new EngineError("Unable to examine object '"+id+"': no such object exists.",this);
+				throw new EngineError("Unable to examine object '"+id+"': no such object exists.",id);
 			}
 		};
 		var _interactWithObject = function(id,context) {
@@ -1797,21 +2257,27 @@ Object.defineProperty(this,"Engine",{
 				if (obj.interactable) {
 					obj.onInteract(context);
 				} else {
-					throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",this);
+					throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",id);
 				}
 			} else {
-				throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",this);
+				throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",id);
 			}
 		};
-		var _logPush = function(id) {
-			_htmlToNodes(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_log);
-			_logPushNoBreak(id,true);
+		this.logPush = function(id) {
+			_this.logPushRawString(_this.LocalizationMap.getString(id));
 		};
-		var _logPushNoBreak = function(id,keepLastInView) {
-			var lastElement = _log.children.length > 0 ? _log.children[_log.children.length - 1] : null;
-			_htmlToNodes(_this.LocalizationMap.getString(id),_log);
+		this.logPushNoBreak = function(id,keepLastInView) {
+			_this.logPushRawStringNoBreak(_this.LocalizationMap.getString(id),keepLastInView);
+		};
+		this.logPushRawString = function(str) {
+			_htmlToNodes(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_logEle);
+			_this.logPushRawStringNoBreak(id,true);
+		};
+		this.logPushRawStringNoBreak = function(str,keepLastInView) {
+			var lastElement = _logEle.children.length > 0 ? _logEle.children[_logEle.children.length - 1] : null;
+			_htmlToNodes(str,_logEle);
 			if (lastElement !== null) {
-				keepLastInView = typeof keepLastInView !== "undefined" ? keepLastInView : false;
+				keepLastInView = _this.defaultBool(keepLastInView);
 				var refElement;
 				if (keepLastInView) {
 					refElement = lastElement;
@@ -1823,12 +2289,35 @@ Object.defineProperty(this,"Engine",{
 						refElement = lastElement;
 					}
 				}
-				_log.scrollTop = refElement.offsetTop;
+				_logEle.scrollTop = refElement.offsetTop;
 			}
+		};
+		this.logPushError = function(e) {
+			// TODO: when refactoring error handling, change this function
+			var msg = "<span class='error'>ERROR:</span> "+e.message;
+			if (e.hasOwnProperty("configStack")) {
+				msg += " ("+e.configStack.join()+")";
+			}
+			_this.logPush(msg);
 		};
 
 		// [LOAD ASSISTORS]
 		// Functions that assist in loading.
+		var _wrapLoad = function(body,arg,manager) {
+			var res = true;
+			try {
+				body(arg);
+			} catch (e) {
+				res = false;
+				if (!(e instanceof EngineError)) {
+					var stack = e.stack;
+					e = new EngineError(e.message);
+					e.stack = stack;
+				}
+				manager.error(e);
+			}
+			return res;
+		};
 		var _wrapCallback = function(req,manager,callback) {
 			req.execute(function(res) {
 				if (res.error) {
@@ -1838,17 +2327,10 @@ Object.defineProperty(this,"Engine",{
 						callback(res);
 						manager.increment();
 					} catch (e) {
-						var e2 = new EngineError(e.message,res);
-						e2.stack = e.stack;
-						manager.error(e2);
+						manager.error(e);
 					}
 				}
 			});
-		};
-		var _verifyStringExists = function(id) {
-			if (!_this.LocalizationMap.hasString(id)) {
-				throw new EngineError("Localization missing required association '"+id+"'.",this);
-			}
 		};
 		var _loadStylesheet = function(file) {
 			var link = document.createElement(_this.Consts.html.TAG_LINK);
@@ -1856,153 +2338,231 @@ Object.defineProperty(this,"Engine",{
 				link.setAttribute(_this.Consts.html.ATTR_HREF,_this.Consts.io.paths.STYLE_USER+file);
 			document.head.appendChild(link);
 		};
-		var _parseLocalization = function(map) {
-			map.globalNode.associations.forEach(function(key,value) {
-				_this.LocalizationMap.setString(key,value);
-			});
-			map.globalNode.children.forEach(function(child) {
-				_this.LocalizationMap.setGroup(child.name.unescapedString,child);
-			});
+		var _wrapParser = function(body,fallbackNode) {
+			var changeFallbackNode = function(newNode) {
+				fallbackNode = newNode;
+			};
+			try {
+				body(changeFallbackNode);
+			} catch (e) {
+				if (!Array.isArray(e.configStack) || e.configStack.length === 0) {
+					e.configStack = _getConfigStack(fallbackNode);
+				}
+				throw e;
+			}
 		};
-		var _parseState = function(node) {
-			var res = new Scope(node.name.unescapedString);
-			node.associations.forEach(function(key,value) {
-				res.defineVariable(key,value.unescapedString);
-			});
-			node.children.forEach(function(child) {
-				res.addChild(_parseState(child));
-			});
+		var _parseLocalization = function(map) {
+			_wrapParser(function() {
+				_this.nodeEnforceNoEntries(map);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.BREAK);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.INITIAL);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.TITLE_PAGE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.TITLE_INV);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.TITLE_ACTS);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.INV_ADD);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.INV_REMOVE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_MOVE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_EXAMINE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_INTERACT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_IMAGE_SOURCE);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_AUDIO_SOURCE);
+				map.globalNode.associations.forEach(function(key,value) {
+					_this.LocalizationMap.setString(key,value);
+				});
+				map.globalNode.children.forEach(function(child) {
+					_this.LocalizationMap.setGroup(child.name.unescapedString,child);
+				});
+				_this.LocalizationMap.validateNgVars();
+				var update = {};
+				_this.LocalizationMap.forEachGroup(function(key,value,isNgKey) {
+					if (isNgKey) {
+						update[key] = new LocalizedConcat(key,value);
+					}
+				});
+				for (var key in update) {
+					if (update.hasOwnProperty(key)) {
+						_this.LocalizationMap.setGroup(key,update[key]);
+					}
+				}
+				_this.LocalizationMap.externLock();
+			},map.globalNode);
+		};
+		var _parseState = function(node,isFirstCall) {
+			isFirstCall = _this.defaultBool(isFirstCall,true);
+			var res;
+			_wrapParser(function() {
+				res = new Scope(node.name.unescapedString,isFirstCall ? [_this.Consts.definition.STATE_LOCATION] : []);
+				node.associations.forEach(function(key,value) {
+					res.defineVariable(key,value.unescapedString);
+				});
+				node.children.forEach(function(child) {
+					res.addChild(_parseState(child));
+				});
+				if (isFirstCall && !res.hasVariable(_this.Consts.definition.STATE_LOCATION)) {
+					throw new EngineError("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.",_state,_getConfigStack(node));
+				}
+			},node);
 			return res;
 		};
 		var _parseImages = function(map) {
-			var id;
-			try {
+			_wrapParser(function(change) {
+				_this.nodeEnforceNoEntries(map.globalNode);
+				_this.nodeEnforceNoAssociations(map.globalNode);
+				_this.nodeEnforceNoEngineChildren(map.globalNode);
+				var id;
 				_images = {};
 				map.globalNode.children.forEach(function(child) {
+					change(child);
+					_this.nodeEnforceNoEntries(child);
+					_this.nodeEnforceNoChildren(child);
+					_this.nodeEnforceHasAssociation(child,_this.Consts.definition.IMAGE_ID);
 					id = child.getAssociation(_this.Consts.definition.IMAGE_ID).unescapedString;
 					if (_images.hasOwnProperty(id)) {
-						throw new EngineError("An image with I.D. \""+id+"\" already exists.",this);
+						throw new EngineError("An image with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
 					} else {
 						_images[id] = Object.freeze(new ImageReference(id,child));
 					}
 				});
-			} catch (e) {
-				if (Array.isArray(e.configStack)) {
-					e.push(id);
-				} else {
-					e.message += " (in image with I.D. \""+id+"\")";
-				}
-				throw e;
-			}
+			},map.globalNode);
 		};
-		var _parseObjects = function() {
-			var id;
-			try {
+		var _parseObjects = function(map) {
+			_wrapParser(function(change) {
+				var id;
 				_objects = {};
-				_objectsMap.globalNode.children.forEach(function(child) {
+				_this.nodeEnforceNoEntries(map.globalNode);
+				_this.nodeEnforceNoAssociations(map.globalNode);
+				-this.nodeEnforceNoEngileChildren(map.globalNode);
+				map.globalNode.children.forEach(function(child) {
+					change(child);
 					id = child.name.unescapedString;
 					if (_objects.hasOwnProperty(id)) {
-						throw new EngineError("An object with I.D. \""+id+"\" already exists.",this);
+						throw new EngineError("An object with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
 					} else {
 						_objects[id] = Object.freeze(new ObjectReference(id,child));
 					}
 				});
-			} catch (e) {
-				if (Array.isArray(e.configStack)) {
-					e.configStack.push(id);
-				} else {
-					e.message += " (in object with I.D. \""+id+"\")";
-				}
-				throw e;
-			}
+			},map.globalNode);
 		};
-		var _parseRooms = function() {
-			var id;
-			try {
+		var _parseRooms = function(map) {
+			_wrapParser(function(change) {
+				var id;
 				_rooms = {};
-				_roomsMap.globalNode.children.forEach(function(child) {
+				_this.nodeEnforceNoEntries(map.globalNode);
+				_this.nodeEnforceNoAssociations(map.globalNode);
+				_this.nodeEnforceNoEngineChildren(map.globalNode);
+				map.globalNode.children.forEach(function(child) {
+					change(child);
 					id = child.name.unescapedString;
 					if (_rooms.hasOwnProperty(id)) {
-						throw new EngineError("A room with I.D. \""+id+"\" already exists.",this);
+						throw new EngineError("A room with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
 					} else {
 						_rooms[id] = Object.freeze(new Room(id,child));
 					}
 				});
-			} catch (e) {
-				if (Array.isArray(e.configStack)) {
-					e.configStack.push(id);
-				} else {
-					e.message += " (in room with I.D. \""+id+"\")";
-				}
-				throw e;
-			}
+			},map.globalNode);
 		};
-		var _parseGraph = function() {
+		var _parseGraph = function(map) {
 			var from;
 			var to;
 			try {
-				_graph = new Graph();
-				var name;
-				_graphMap.globalNode.children.forEach(function(child) {
-					from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
-					to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
-					name = child.name.unescapedString;
-					if (name === _this.Consts.definition.GRAPH_EDGE) {
-						_graph.push(new GraphEdge(from,to,child));
-					} else {
-						throw new EngineError("Unexpected child \""+name+"\" in graph definition.",this);
-					}
-				});
+				_wrapParser(function(change) {
+					var name;
+					_graph = new Graph();
+					_this.nodeEnforceNoEntries(map.globalNode);
+					_this.nodeEnforceNoAssociations(map.globalNode);
+					_this.nodeEnforceOnlyTheseChildren(map.globalNode,[_this.Consts.definition.GRAPH_EDGE]);
+					map.globalNode.children.forEach(function(child) {
+						change(child);
+						_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_ORIGIN);
+						_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_DESTINATION);
+						from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
+						to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
+						name = child.name.unescapedString;
+						if (name === _this.Consts.definition.GRAPH_EDGE) {
+							_graph.push(new GraphEdge(from,to,child));
+						} else {
+							throw new EngineError("Unexpected child \""+name+"\" in graph definition.",child,_getConfigStack(child));
+						}
+					});
+				},map.globalNode);
 			} catch (e) {
-				if (Array.isArray(e.configStack)) {
-					e.configStack.push(id);
-				} else {
-					e.message += " (in graph edge from \""+from.unescapedString+"\" to \""+to.unescapedString+"\")";
-				}
+				e.message += " (in graph edge from \""+from.unescapedString+"\" to \""+to.unescapedString+"\")";
 				throw e;
 			}
+		};
+		var _parseActions = function(map) {
+			_wrapParser(function(change) {
+				var id;
+				_actions = {};
+				_actions[_this.Consts.execution.ACTION_MOVE] = null;
+				_actions[_this.Consts.execution.ACTION_EXAMINE] = null;
+				_actions[_this.Consts.execution.ACTION_INTERACT] = null;
+				_this.nodeEnforceNoEntries(map.globalNode);
+				_this.nodeEnforceNoAssociations(map.globalNode);
+				_this.nodeEnforceNoEngineChildren(map.globalNode);
+				map.globalNode.children.forEach(function(child) {
+					change(child);
+					id = child.name.unescapedString;
+					if (_actions.hasOwnProperty(id)) {
+						throw new EngineError("An action with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
+					} else {
+						_actions[id] = Object.freeze(new Action(id,child));
+					}
+				});				
+			},map.globalNode);
 		};
 
 		// [INIT]
 		// Program entry point.
 		window.addEventListener("DOMContentLoaded",function() {
+			// TODO: One error exits entire load segment, rectify this and allow load function to throw many errors
+			// 	(<ul> element with id errorLog)
 			_container = document.getElementById("container");
 			_containerContent = _container.innerHTML;
 
-			var manager = new LoadCounter(7,_container);
+			var _stylesheets;
+			var _localizationMap;
+			var _stateMap;
+			var _imagesMap;
+			var _objectsMap;
+			var _roomsMap;
+			var _graphMap;
+			var _actionsMap;
+
+			var manager = new LoadCounter(8,_container);
 			manager.onLoad = function() {
 				// [MAIN]
 				// Sets up the initial state and prepares for possible user input.
 				var good = true;
-				try {
-					_parseObjects();
-					_parseRooms();
-					_parseGraph();
-				} catch (e) {
-					if (e instanceof EngineError) {
-						manager.error(e);
-					} else {
-						var e2 = new EngineError(e.message);
-						e2.stack = e.stack;
-						manager.error(e2);
-					}
-					good = false;
+				for (var i = 0; i < _stylesheets.length; i++) {
+					good &= _wrapLoad(_loadStylesheet,_stylesheets[i],manager);
 				}
+				good &= _wrapLoad(_parseLocalization,_localizationMap,manager)
+				good &= _wrapLoad(function() {
+					_state = _parseState(_stateMap.globalNode,"global");
+				},undefined,manager);
+				good &= _wrapLoad(_parseImages,_imagesMap,manager);
+				good &= _wrapLoad(_parseObjects,_objectsMap,manager);
+				good &= _wrapLoad(_parseRooms,_roomsMap,manager);
+				good &= _wrapLoad(_parseGraph,_graphMap,manager);
+				good &= _wrapLoad(_parseActions,_actionsMap,manager);
 
 				if (good) {
 					_container.innerHTML = _containerContent;
-					_log = document.getElementById(_this.Consts.html.page.LOG);
-					_image = document.getElementById(_this.Consts.html.page.IMAGE);
-					_inv = document.getElementById(_this.Consts.html.page.INV);
-					_actions = document.getElementById(_this.Consts.html.page.ACTIONS);
-					_quests = document.getElementById(_this.Consts.html.page.QUESTS);
+					_logEle = document.getElementById(_this.Consts.html.page.LOG);
+					_imageEle = document.getElementById(_this.Consts.html.page.IMAGE);
+					_invEle = document.getElementById(_this.Consts.html.page.INV);
+					_actionsEle = document.getElementById(_this.Consts.html.page.ACTIONS);
+					_questsEle = document.getElementById(_this.Consts.html.page.QUESTS);
 
 					document.title = _this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_PAGE));
-					_log.textContent = "";
-					_logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
-					_inv.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
-					_actions.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
-					_quests.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+					_logEle.textContent = "";
+					_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
+					_invEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
+					_actionsEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
+					_questsEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
 					_getCurrentRoom().getImage().display();
 				}
 			};
@@ -2022,44 +2582,25 @@ Object.defineProperty(this,"Engine",{
 			// AJAX requests that load data from files.
 			var req = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_STYLING);
 			_wrapCallback(req,manager,function(res) {
-				var json = JSON.parse(res.text);
-				for (var i = 0; i < json.length; i++) {
-					_loadStylesheet(json[i]);
-				}
+				_stylesheets = JSON.parse(res.text);
 			});
 			var req2 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_LOCALIZATION);
 			req2.data = {
 				lang: query.hasOwnProperty("lang") ? query.lang : "en"
 			};
 			_wrapCallback(req2,manager,function(res) {
-				_parseLocalization(new COM.Map(res.text));
-				_verifyStringExists(_this.Consts.localization.configKeys.BREAK);
-				_verifyStringExists(_this.Consts.localization.configKeys.INITIAL);
-				_verifyStringExists(_this.Consts.localization.configKeys.TITLE_PAGE);
-				_verifyStringExists(_this.Consts.localization.configKeys.TITLE_INV);
-				_verifyStringExists(_this.Consts.localization.configKeys.TITLE_ACTS);
-				_verifyStringExists(_this.Consts.localization.configKeys.TITLE_QUESTS);
-				_verifyStringExists(_this.Consts.localization.configKeys.INV_ADD);
-				_verifyStringExists(_this.Consts.localization.configKeys.INV_REMOVE);
-				_verifyStringExists(_this.Consts.localization.configKeys.ACTION_MOVE);
-				_verifyStringExists(_this.Consts.localization.configKeys.ACTION_EXAMINE);
-				_verifyStringExists(_this.Consts.localization.configKeys.ACTION_INTERACT);
-				_verifyStringExists(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
-				_verifyStringExists(_this.Consts.localization.configKeys.IMAGE_SOURCE);
+				_localizationMap = new COM.Map(res.text);
 			});
 			var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 			_wrapCallback(req3,manager,function(res) {
-				_state = _parseState(new COM.Map(res.text).globalNode,"global");
-				if (!_state.hasVariable(_this.Consts.definition.STATE_LOCATION)) {
-					throw new EngineError("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.",this);
-				}
+				_stateMap = new COM.Map(res.text);
 			});
 			var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_IMAGES);
 			req4.data = {
 				folder: _this.Consts.io.paths.COMMON_IMAGES
 			};
 			_wrapCallback(req4,manager,function(res) {
-				_parseImages(new COM.Map(res.text));
+				_imagesMap = new COM.Map(res.text);
 			});
 			var req5 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
 			req5.data = {
@@ -2081,6 +2622,13 @@ Object.defineProperty(this,"Engine",{
 			};
 			_wrapCallback(req7,manager,function(res) {
 				_graphMap = new COM.Map(res.text);
+			});
+			var req8 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_MISC);
+			req8.data = {
+				folder: _this.Consts.io.paths.COMMON_ACTIONS
+			};
+			_wrapCallback(req8,manager,function(res) {
+				_actionsMap = new COM.Map(res.text);
 			});
 		});
 	})()),

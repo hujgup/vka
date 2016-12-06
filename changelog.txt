@@ -2,6 +2,32 @@
 ## VKA CHANGELOG ##
 ###################
 
+## v0.5.0.0 (1)
+
+## Pre-release version number semantics: v0.a.b.c (d)
+* a: Added new features.
+* b: Changed existing features.
+* c: Bugfixes.
+* d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
+
+## v0.5.0.0 (current, unfinished)
+* Added scripted localization for image crediting and audio crediting, so that the artist is mentioned.
+* Added "raw text" localization element "r".
+* Added parsing support for rooms that have additional custom actions, or custom actions that override the default ones.
+* Added support for rooms that play audio.
+* Added public functions for resolving default arguments.
+* Added a runtime error logging method.
+* Exposed node structure enforcement methods.
+* Exposed logging functions.
+* EngineError causes should now be more appropriate.
+* Refactored loading so that parsing methods can report multiple errors.
+* Refactored loading so that temporary COM.Map variables aren't exposed to the entire engine.
+* Fixed inconsistencies in strictness of cfg structure enforcement.
+* Fixed bug where localization files could define custom @ keys, which are reserved by the system.
+* Fixed bug where common files could define custom @ keys, which are reserved by the system.
+* Fixed bug where escaping trailing whitespace in cfg files was not working properly.
+* Changed version numbering semantics: Added trailing component detailing commit number, starting from 1 (so that I can push to Git while in the middle of writing an update). "b" component now used for refactors.
+
 ## v0.4.4.0
 * Allowed images in gfx/app to be in subfolders.
 * Allowed users to specify certain images that should not be interpolated during resizing.
@@ -120,7 +146,6 @@
 * "game/style" folder structure laid out.
 * Index page layout first pass.
 * Renamed "game/config" to "game/common".
-
 
 ## v0.0.0.0
 * Initial commit.

@@ -299,6 +299,19 @@ var COM = new (function() {
 	var _applyDefault = function(value,df) {
 		return typeof value !== "undefined" ? value : df;
 	};
+	var _complexTrim = function(str) {
+		var regex = /(\\*)(?=\s*$)/; // Final string of backslashes followed by whitespace
+		var match = regex.exec(str);
+		var c = "";
+		if (match !== null && match[1].length%2 === 1) {
+			var index = match.index + match[1].length;
+			if (index < str.length && str[index].search(/\s/) === 0) {
+				c = str[index];
+			}
+		}
+		str = str.trim()+c;
+		return str;
+	};
 
 	var ConfigParser = new (function() {
 		var _blockComment = /#~[\s\S]*?~#/g;
@@ -383,7 +396,7 @@ var COM = new (function() {
 			while (str.length !== 0 && str[str.length - 1] !== "}") {
 				str.pop();
 			}
-			return this.prepareContents(str,name.trim());
+			return this.prepareContents(str,_complexTrim(name));
 		};
 	})();
 
@@ -855,14 +868,16 @@ var COM = new (function() {
 			var index = line.indexOfCharacter("=");
 			var key = line.substring(0,index).rawString;
 			var value = line.substring(index + 1).rawString;
-			_this2.setAssociation(ConfigParser.unescape(key.trim()),ConfigParser.unescape(value.trim()));
+			var key = ConfigParser.unescape(_complexTrim(key));
+			var value = ConfigParser.unescape(_complexTrim(value));
+			_this2.setAssociation(key,value);
 		};
 		var _parseContents = function(contents) {
 			contents = contents.split(_newLine);
 			var unescaped;
 			var line;
 			for (var i = 0; i < contents.length; i++) {
-				line = contents[i].trim();
+				line = _complexTrim(contents[i]);
 				if (line !== "") {
 					unescaped = line;
 					line = ConfigParser.escape(line);
@@ -899,7 +914,7 @@ var COM = new (function() {
 					while (str.length !== 0 && WHITESPACE_CIPHER.indexOf(str[0]) !== -1) {
 						str.shift();
 					}
-					blockName = blockName.trim();
+					blockName = _complexTrim(blockName);
 					_name = ConfigParser.unescape(blockName);
 					var blockContents = "";
 					var fullContents = "";
