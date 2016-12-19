@@ -5,7 +5,10 @@
 	<title>VKA Image Consistency Specification</title>
 	<link rel="stylesheet" href="style/global.css" />
 	<link rel="stylesheet" href="style/spec.css" />
-	<script src="script/iteration.js" defer></script>
+<!--
+	<script src="script/sortableTable.js" defer></script>
+-->
+	<script src="script/logic.js" defer></script>
 	<script src="script/spec.js" defer></script>
 <!--
 Images to commission, by world:
@@ -22,21 +25,20 @@ MODULARITY:
 DOLCETT:
 	Karkat, luxuriating inside an oven, roasting alive.
 		Then, Vriska and Karkat dining on his cooked flesh after a respawn or whatever.
-REDUCTION:
+REDUCTION/OBJECTIFICATION:
 	Terezi and Vriska as pot-girls on a shelf. Terezi seems unsure how to feel about this. Vriska looks like she's finaly found her purpose in life.
+	Aradia lying down on a couch made of Dave and Feferi.
 TRANSFORMATION:
 	Statue of Feferi, naked, erect, posing playfully, and blowing a kiss.
 FREE USE:
 	Vriska fucking John's ass and Feferi fucking Jade's ass. John and Jade are just talking and eating lunch like this is normal.
-OBJECTIFICATION:
-	Aradia lying down on a couch made of Dave and Feferi.
 -->
 </head>
 <body>
 	<article class="content">
 		<header>
 			<h1>VKA Image Consistency Specification</h1>
-			<p>The purpose of this document is to ensure consistency between images made by disparate artists.</p>
+			<p>The purpose of this document is to ensure consistency between images made by disparate artists. I've tried to write it to answer as many potential questions as possible, address common pitfalls, provide as much data about the world of each image as possible, and provide a style guide for how images should appear. However, there's always the possibility that I've missed something, or forgot to mention it in the spec for each specific image. If you are unsure about anything, do not hesitate to email me with questions.</p>
 			<p>Use the navigation control below to jump to a specific section. Click the "Show Tags" checkbox to display a list of things each section is relevant to. Use the "Tag Filter" control to display only content relevant to specific tags.</p>
 			<div class="area-group">
 				<div class="area">
@@ -56,41 +58,370 @@ OBJECTIFICATION:
 			</div>
 		</header>
 		<div id="root">
-			<section id="secGen" class="indent" data-tags="genitalia">
-				<h2 data-title>Genitalia</h2>
-				<section id="secGenHumans" class="indent" data-tags="humans">
-					<h3 data-title>Humans</h3>
-					<section id="secGenHumansGeneral" class="indent" data-tags="john rose dave">
-						<h4 data-title>General Case</h4>
-						<p>John, Rose, and Dave have standard genitalia for their respective sexes.</p>
+			<section id="secSetting" class="indent" data-tags="setting">
+				<h2 data-title>Setting</h2>
+				<p>This section describes the AU the game is set in, and the various worlds contained within it.</p>
+				<p>The game takes place in a loose "almost everyone is alive and on the Meteor AU" setting, for every main character up to EOA5 ([S] Cascade). Everything that happened in canon in Act 6+ has not occured in this AU. Specifics may change depending on which gameplay world a given image will be used for; these changes are detailed below.</p>
+				<section id="secSettingChars" class="indent" data-tags="characters">
+					<h3 data-title>Character Data</h3>
+					<p>This section details the state of each character.</p>
+					<section id="secSettingCharsDef" class="indent" data-tags="definition">
+						<h4 data-title>Definition of Terms</h4>
+						<p>Some of the terms used in the table below require definition. This table provides those definitions.</p>
+						<p>Note that all genitalia will be human-type.</p>
+						<table class="hs-table">
+							<tbody>
+								<tr>
+									<th scope="col">Term</th>
+									<th scope="col">Definition</th>
+								</tr>
+								<tr>
+									<th scope="row">Hermaphroditic</th>
+									<td>This character posesses a human penis and a human vagina. No testicles are present.</td>
+								</tr>
+								<tr>
+									<th scope="row">Dual Hermaphroditic</th>
+									<td>This character posesses two human penises and vaginas. No testicles are present. The positions of the duplicate organs should express bilateral symmetry along the height axis.</td>
+								</tr>
+<!--
+								<tr>
+									<th scope="row">x</th>
+									<td>x</td>
+								</tr>
+-->
+							</tbody>
+						</table>
 					</section>
-					<section id="secGenHumansJade" class="indent" data-tags="jade">
-						<h4 data-title>Jade</h4>
-						<p>Jade is a hermaphrodite, posessing both a human-standard penis and a vagina.</p>
+					<section id="secSettingsCharsTable" class="indent" data-tags="">
+						<h4 data-title>Data Table</h4>
+						<table id="charDataTable" class="hs-table char-data-table" data-sortable>
+							<tbody data-children>
+								<tr>
+									<!-- TODO: Sortable table API and styling. Everything here, plus data-sort-comparer for custom comparison functions. Headings with no data-sort-x attribute cannot be sorted. -->
+									<th scope="col" data-sort-preset="initial-order">Character</th>
+									<th scope="col" data-sort-preset="ascii-trim-nocase">Sexual Organs</th>
+									<th scope="col" data-sort-preset="initial-order">Blood Color</th>
+									<th scope="col" data-sort-preset="initial-order">Skin Color</th>
+									<th scope="col">Clothing Reference</th>
+									<th scope="col">Body Type Reference</th>
+									<th scope="col" data-sort-preset="ascii-trim-nocase">Additional Notes</th>
+								</tr>
+								<tr id="secSettingCharsJohn" data-tags="john">
+									<th scope="row" data-title>John Egbert</th>
+									<td>Male</td>
+									<td class="mono color-cell">Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td><img src="resources/inline/clothes/john.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Hood should only go down to the waist, not trail behind him as in the clothing reference.</td>
+								</tr>
+								<tr id="secSettingCharsRose" data-tags="rose">
+									<th scope="row" data-title>Rose Lalonde</th>
+									<td>Female</td>
+									<td class="mono color-cell">Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td><img src="resources/inline/clothes/rose.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+								<tr id="secSettingCharsDave" data-tags="dave">
+									<th scope="row" data-title>Dave Strider</th>
+									<td>Male</td>
+									<td class="mono color-cell">Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td><img src="resources/inline/clothes/dave.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+								<tr id="secSettingCharsJade" data-tags="jade">
+									<th scope="row" data-title>Jade Harley</th>
+									<td>Hermaphroditic</td>
+									<td class="mono color-cell">Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td><img src="resources/inline/clothes/jade.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Is Dog Tier (ears and tail).</td>
+								</tr>
+								<!-- Troll skin color rule: One RGB component = 0xC0 + floor(blood component value/22) -->
+								<tr id="secSettingCharsAradia" data-tags="aradia">
+									<th scope="row" data-title>Aradia Megido</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#A10000</td>
+									<td data-show-color>#C7C0C0</td>
+									<td><img src="resources/inline/clothes/aradia.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Has wings out by default.</td>
+								</tr>
+								<tr id="secSettingCharsTavros" data-tags="tavros">
+									<th scope="row" data-title>Tavros Nitram</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#A25203</td>
+									<td data-show-color>#C7C3C0</td>
+									<td><img src="resources/inline/clothes/tavros.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Robotic genitals (because he has robotic legs).</td>
+								</tr>
+								<tr id="secSettingCharsSollux" data-tags="sollux">
+									<th scope="row" data-title>Sollux Captor</th>
+									<td>Dual Hermaphroditic</td>
+									<td data-show-color>#A1A100</td>
+									<td data-show-color>#C7C7C0</td>
+									<td><img src="resources/inline/clothes/sollux.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Not blind or half dead.</td>
+								</tr>
+								<tr id="secSettingCharsKarkat" data-tags="karkat">
+									<th scope="row" data-title>Karkat Vantas</th>
+									<td>Female</td>
+									<td data-show-color>#F20000</td>
+									<td data-show-color>#CBC0C0</td>
+									<td><img src="resources/inline/clothes/karkat.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+								<tr id="secSettingCharsNepeta" data-tags="nepeta">
+									<th scope="row" data-title>Nepeta Leijon</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#2E4800</td>
+									<td data-show-color>#C2C3C0</td>
+									<td><img src="resources/inline/clothes/nepeta.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Tail is an extension of her spine.</td>
+								</tr>
+								<tr id="secSettingCharsKanaya" data-tags="kanaya">
+									<th scope="row" data-title>Kanaya Maryam</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#078446</td>
+									<td data-show-color>#C0C6C3</td>
+									<td><img src="resources/inline/clothes/kanaya.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Is still a rainbow drinker and still has that hole in her stomach.</td>
+								</tr>
+								<tr id="secSettingCharsTerezi" data-tags="terezi">
+									<th scope="row" data-title>Terezi Pyrope</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#008282</td>
+									<td data-show-color>#C0C5C5</td>
+									<td><img src="resources/inline/clothes/terezi.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>Is still blind.</td>
+								</tr>
+								<tr id="secSettingCharsVriska" data-tags="vriska">
+									<th scope="row" data-title>Vriska Serket</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#004182</td>
+									<td data-show-color>#C0C3C6</td>
+									<td><img src="resources/inline/clothes/vriska.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td>God Tier, so no robot arm or destroyed eye.</td>
+								</tr>
+								<tr id="secSettingCharsEquius" data-tags="equius">
+									<th scope="row" data-title>Equius Zahhak</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#0021CB</td>
+									<td data-show-color>#C0C1C9</td>
+									<td><img src="resources/inline/clothes/equius.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+								<tr id="secSettingCharsEridan" data-tags="eridan">
+									<th scope="row" data-title>Eridan Ampora</th>
+									<td>Hermaphroditic</td>
+									<td data-show-color>#6A006A</td>
+									<td data-show-color>#C4C0C4</td>
+									<td><img src="resources/inline/clothes/eridan.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+								<tr id="secSettingCharsFeferi" data-tags="feferi">
+									<th scope="row" data-title>Feferi Peixes</th>
+									<td>Male</td>
+									<td data-show-color>#99004D</td>
+									<td data-show-color>#C6C0C3</td>
+									<td><img src="resources/inline/clothes/feferi.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+<!--
+								<tr id="secSettingCharsX" data-tags="x">
+									<th scope="row" data-title>x</th>
+									<td>x</td>
+									<td data-show-color>#x</td>
+									<td data-show-color>#x</td>
+									<td><img src="resources/inline/clothes/x.png" class="thumb-img" /></td>
+									<td><img src="x" class="thumb-img" /></td>
+									<td></td>
+								</tr>
+-->
+							</tbody>
+						</table>
 					</section>
 				</section>
-				<section id="secGenTrolls" class="indent" data-tags="trolls">
-					<h3 data-title>Trolls</h3>
-					<section id="secGenTrollsGeneral" class="indent" data-tags="aradia tavros nepeta kanaya terezi vriska equius gamzee eridan">
-						<h4 data-title>General Case</h4>
-						<p>By default, trolls are hermaphrodites, posessing both a human-standard penis and a vagina.</p>
+				<section id="secSettingWorlds" class="indent" data-tags="worlds">
+					<h3 data-title>Worlds</h3>
+					<section id="secSettingWorldsCharacters" class="indent" data-tags="humans trolls john rose dave jade aradia tavros sollux karkat nepeta kanaya terezi vriska equius gamzee eridan feferi">
+						<h4 data-title>Characters and how they Interact with Worlds</h4>
+						<p>Vriska Serket has the ability to teleport between various worlds, and is the only character with a knowledge of this multiverse. Every other character in a world, unless explicitly stated otherwise, is a native of that world, and will thus not find its practices strange in any way - they grew up with it.</p>
 					</section>
-					<section id="secGenTrollsSollux" class="indent" data-tags="sollux">
-						<h4 data-title>Sollux</h4>
-						<p>Sollux posesses two penises and two vaginas. Their positions should be symmetric along the vertical axis.</p>
-					</section>
-					<section id="secGenTrollsKarkat" class="indent" data-tags="karkat">
-						<h4 data-title>Karkat</h4>
-						<p>Karkat posesses only a human-standard vagina, with a clitoris in place of the penis.</p>
-					</section>
-					<section id="secGenTrollsFeferi" class="indent" data-tags="feferi">
-						<h4 data-title>Feferi</h4>
-						<p>Feferi posesses only a human-standard penis, with a ballsack in place of the vagina.</p>
+					<section id="secSettingsWorldsList" class="indent" data-tags="">
+						<h4 data-title>World Table</h4>
+						<p>The following is a table of the worlds being targeted for completion by v1.0. More may be added in subsequent updates. Hover over column headings for more detail about their meaning.</p>
+						<p>Please note that most of the example images given are going to be of girls because these sorts of fetishes tend to appear more in males. Most males are heterosexual, therefore artists tend to draw girls both to appeal to a wider audience within an already very niche market, and because it is most likely that they themselves are heterosexual males. However, this does not mean that any of the below details apply to only girls. Refer to the specific spec for your image(s) for details on character roles, and if you're unsure about anything, don't hesitate to ask.</p>
+						<table id="worldTable" class="hs-table">
+							<tbody data-children>
+								<tr>
+									<th scope="col" title="The name of the world.">World</th>
+									<th scope="col" title="What kinks this world is catering to (although one image may not necesarily include all of them).">Kinks</th>
+									<th scope="col" title="A description about what is different about this world.">Description</th>
+									<th scope="col" title="Images or fics that reinforce or clarify the content of the description.">Examples</th>
+								</tr>
+								<tr id="secSettingWorldsNormal" data-tags="vanilla">
+									<th scope="row" data-title>Normal</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Vanilla Sex</li>
+										</ul>
+									</td>
+									<td>This is the bog-standard world, where all mechanics are identical to canon. This is the world the player will start the game in.</td>
+									<td>None</td>
+								</tr>
+								<tr id="secSettingWorldsModularity" data-tags="modularity nbm headlessness multi">
+									<th scope="row" data-title>Modularity</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Modularity</li>
+											<li>Natural Body Magic</li>
+											<li>Headlessness</li>
+											<li>Multi</li>
+										</ul>
+									</td>
+									<td>In this world, people have the ability to detatch their own body parts and the body parts of others, re-attach them, attach them in a different place to where they started, attach someone else's body part to their own body (and vice versa), and fabricate new body parts for attaching.</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="http://accessworld.deviantart.com/art/Girls-just-wanna-to-have-fun-356316174">Girls just wanna to have fun<sup>[sic]</sup> by AccessWorld</a></li>
+											<li><a target="_blank" href="http://accessworld.deviantart.com/art/She-s-got-legs-English-93993668">She's Got Legs by AccessWorld</a></li>
+											<li><a target="_blank" href="http://accessworld.deviantart.com/art/Comission-Take-a-Walk-pag-01-428032560">Take a Walk (Page 1) by AccessWorld</a></li>
+											<li><a target="_blank" href="http://accessworld.deviantart.com/art/Comission-Take-a-Walk-pag-02-428033052">Take a Walk (Page 2) by AccessWorld</a></li>
+											<li><a target="_blank" href="http://accessworld.deviantart.com/art/Brittany-294285246?q=DetachedPeople%2F24704510&qo=2">Brittany by AccessWorld</a></li>
+											<li><a target="_blank" href="http://everlonegui.deviantart.com/art/RDraw-37-620581496">RDraw 37 by EverloneGui</a></li>
+											<li><a target="_blank" href="http://www.deviantart.com/art/Proudly-Showing-It-165795664">Proudly Showing It by headlessFetish</a></li>
+										</ul>
+									</td>
+								</tr>
+								<tr id="secSettingWorldsDoclett" data-tags="dolcett-like hard-vore cooking cannibalism guro gore snuff">
+									<th scope="row" data-title>Doclett-Like</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Hard Vore</li>
+											<li>Cooking</li>
+											<li>Cannibalism</li>
+											<li>Guro</li>
+											<li>Gore</li>
+											<li>Snuff</li>
+										</ul>
+									</td>
+									<td>In this world, people are killed, cooked, and eaten regularly. Everyone has a respawn ability, meaning that nobody can die permanently but their corpse is left behind.<br /><strong>IMPORTANT:</strong> This world differs from the standard Doclett universe in that misogynism is <strong>NOT</strong> a part of it in any way.</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="resources/examples/tumblr_nj9q5wExh91un65quo1_1280.jpg">Karkat in an Oven (Source lost to time)</a></li>
+											<li><a target="_blank" href="http://necrobabes.darkfetishnet.com/dolcett/gyno_pics/images/fordaddy.gif">For Daddy by Dolcett</a></li>
+											<li><a target="_blank" href="http://necrobabes.darkfetishnet.com/dolcett/gyno_pics/images/filet.gif">Filet by Dolcett</a></li>
+											<li><a target="_blank" href="https://www.gurochan.ch/g/src/1432380355079.jpg">Cooked Girls (Found on an image board, source unknown)</a></li>
+											<li><a target="_blank" href="http://aaronscales15.deviantart.com/art/Vorestuck-JohnKat-role-reversal-548224842">Vorestuck: JohnKat Role Reversal by AaronScales15</a></li>
+										</ul>
+									</td>
+								</tr>
+								<tr id="secSettingWorldsReduction" data-tags="reuction amputation objectification">
+									<th scope="row" data-title>Reduction/Objectification</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Reduction</li>
+											<li>Amputation</li>
+											<li>Objectification</li>
+										</ul>
+									</td>
+									<td>In this world, it is commonplace for people's living bodies to be reduced so that their new bodies make it easier to do certain jobs; for example, taking off all 4 limbs and using someone as a pillow, compressing someone down and sticking them in a pot for decoration, stringing together multiple people to make a couch, etc..</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="http://gammatelier.free.fr/full/egyptian_pot-girl.jpg">Egyptian Pot-Girl by Gammatelier</a></li>
+											<li><a target="_blank" href="http://gammatelier.free.fr/full/feeding_time.jpg">Feeding Time by Gammatelier</a></li>
+											<li><a target="_blank" href="resources/examples/pillow_bag_girl.jpg">Pillow Bag Girl by Gammatelier</a></li>
+											<li><a target="_blank" href="resources/examples/1d1dd27ab854e0b141b262b9fe543061.jpeg">Girl-Chair (Found on an image board, source unknown)</a></li>
+										</ul>
+									</td>
+								</tr>
+								<tr id="secSettingWorldsTransformation" data-tags="tf">
+									<th scope="row" data-title>Transformation</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Body Part TF</li>
+											<li>Inanimate TF</li>
+											<li>Species TF</li>
+										</ul>
+									</td>
+									<td>In this world, people can be transformed into, or merged into, other things, such as body parts, animals, or inanimate objects.</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="http://brabound.com/wp-content/uploads/wppa/1341.png">Cathayan Video by Ordos Tsceri</a></li>
+											<li><a target="_blank" href="http://68.media.tumblr.com/3a7239445aecf9ecf7379531e2a8969c/tumblr_inline_nqiqb7tZbn1ryo391_1280.png">Plant Rose part 2 by damarasdungeon</a></li>
+											<li><a target="_blank" href="http://68.media.tumblr.com/48b3873c72fe0d33fde2d7401355eafd/tumblr_inline_nlhwc3wZ9D1ryo391_500.png">Roxy Urinal TF Sequence by damarasdungeon</a></li>
+											<li><a target="_blank" href="http://rastatue.deviantart.com/art/Surprised-III-433315958">Surprised III by Rastatue</a></li>
+											<li><a target="_blank" href="http://bendzz.deviantart.com/art/Rocking-Horse-TF-371251439">Rocking Horse (TF) by bendzz</a></li>
+										</ul>
+									</td>
+								</tr>
+								<tr id="secSettingWorldsX" data-tags="free-use vanilla nudism bukkake somnophilia watersports">
+									<th scope="row" data-title>Free Use</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>Free Use</li>
+											<li>Vanilla Sex</li>
+											<li>Casual Nudity</li>
+											<li>Bukkake</li>
+											<li>Somnophilia</li>
+											<li>Watersports</li>
+										</ul>
+									</td>
+									<td>In this world, sex is completely detached from intimacy, with it instead being a very casual thing that everyone is open to do all the time (i.e. consent is assumed and must be explicitly revoked, as opposed to the real world, where consent must also be explicitly given before any sexual acts can be ethically performed). In addition, people generally multitask sex, for example if they were eating breakfast and someone came up and started fucking them, they would continue eating breakfast.</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="https://gfycat.com/SaltyCornyBlowfish">Casual Rimming by Simple Sample</a></li>
+											<li><a target="_blank" href="http://free-use-universe.tumblr.com/image/134720096274">Community Service Opportunity by free-use-universe</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+											<li><a target="_blank" href="x">x</a></li>
+										</ul>
+									</td>
+								</tr>
+<!-- TODO: Free use examples -->
+<!--
+								<tr id="secSettingWorldsX" data-tags="">
+									<th scope="row" data-title>x</th>
+									<td>
+										<ul class="inline-list-commas">
+											<li>x</li>
+										</ul>
+									</td>
+									<td>x</td>
+									<td>
+										<ul class="inline-list-commas">
+											<li><a target="_blank" href="x">x</a></li>
+										</ul>
+									</td>
+								</tr>
+-->
+							</tbody>
+						</table>
 					</section>
 				</section>
 			</section>
 			<section id="secCol" class="indent" data-tags="trolls blood coloration">
 				<h2 data-title>Troll Blood Coloration</h2>
+				<p>This section describes the visibility of troll blood in various contexts.</p>
 				<section id="secColSkin" class="indent" data-tags="skin penis vagina nipples tongue wounds cheeks blush aradia tavros sollux karkat nepeta kanaya terezi vriska equius gamzee eridan feferi">
 					<h3 data-title>Thin Skin</h3>
 					<p>Thin pieces of troll skin should be colored according to the specific troll's blood color.</p>
@@ -110,69 +441,60 @@ OBJECTIFICATION:
 					<p>Certain internal components, if visible in an image, must be colored according to the specific troll's blood color.</p>
 					<p>The following is an exhaustive list of places where this applies.</p>
 					<ul>
-						<li>Internal organs that have a red or pink tint in humans. Pink-tinted organs should be tinted less intensely in the troll's blood color.</li>
-						<li>Muscles that are red in humans.</li>
+						<li>Visible sections of flesh and muscle.</li>
+						<li>Internal organs.</li>
+						<!-- TODO: Specify which internal organs, and the intensities of the coloring -->
 					</ul>
 				</section>
-				<section id="secColBlood" class="indent" data-tags="">
-					<h3 data-title>Blood Colors</h3>
-					<p>Many people assume that each troll's text color is identical to their blood color, but this is simply not the case. This table lists the real blood colors of each troll. In cases where canon sources differ, the most recent source will be used.</p>
-					<table id="bloodTable" class="blood-table">
-						<tbody data-children>
-							<tr>
-								<th scope="col">Troll</th>
-								<th scope="col">Blood Color</th>
-							</tr>
-							<tr id="secColBloodAradia" data-tags="aradia">
-								<th scope="row" data-title>Aradia</th>
-								<td>#A10000</td>
-							</tr>
-							<tr id="secColBloodTavros" data-tags="tavros">
-								<th scope="row" data-title>Tavros</th>
-								<td>#A25203</td>
-							</tr>
-							<tr id="secColBloodSollux" data-tags="sollux">
-								<th scope="row" data-title>Sollux</th>
-								<td>#A1A100</td>
-							</tr>
-							<tr id="secColBloodKarkat" data-tags="karkat">
-								<th scope="row" data-title>Karkat</th>
-								<td>#F20000</td>
-							</tr>
-							<tr id="secColBloodNepeta" data-tags="nepeta">
-								<th scope="row" data-title>Nepeta</th>
-								<td>#2E4800</td>
-							</tr>
-							<tr id="secColBloodKanaya" data-tags="kanaya">
-								<th scope="row" data-title>Kanaya</th>
-								<td>#078446</td>
-							</tr>
-							<tr id="secColBloodTerezi" data-tags="terezi">
-								<th scope="row" data-title>Terezi</th>
-								<td>#008282</td>
-							</tr>
-							<tr id="secColBloodVriska" data-tags="vriska">
-								<th scope="row" data-title>Vriska</th>
-								<td>#004182</td>
-							</tr>
-							<tr id="secColBloodEquius" data-tags="equius">
-								<th scope="row" data-title>Equius</th>
-								<td>#0021CB</td>
-							</tr>
-							<tr id="secColBloodGamzee" data-tags="gamzee">
-								<th scope="row" data-title>Gamzee</th>
-								<td>#440A7F</td>
-							</tr>
-							<tr id="secColBloodEridan" data-tags="eridan">
-								<th scope="row" data-title>Eridan</th>
-								<td>#6A006A</td>
-							</tr>
-							<tr id="secColBloodFeferi" data-tags="feferi">
-								<th scope="row" data-title>Feferi</th>
-								<td>#99004D</td>
-							</tr>
-						</tbody>
-					</table>
+			</section>
+			<section id="secStyle" class="indent" data-tags="style">
+				<h2 data-title>Style Guide</h2>
+				<p>This section describes the style conventions that every image must follow.</p>
+				<p>Note that images that fail to meet these requirements will be edited such that the requirements are met.</p>
+				<section id="secStyleRatio" class="indent" data-tags="ratio">
+					<h3 data-title>Edge Ratio</h3>
+					<p>Images must be around a 2:1 width:height ratio. A deviation of up to 0.3 is acceptable (1.7:1 to 2.3:1).</p>
+					<!-- TODO: Demonstration of why 2:1 is the ideal ratio -->
+				</section>
+				<section id="secStyleSize" class="indent" data-tags="size resampling">
+					<h3 data-title>Image Size and Resampling</h3>
+					<p>Images must have a width of at least 1024 pixels. Images must look good when downscaled using the method described in the <a href="#secStyleVerifySize">Verify: Image Size and Resampling</a> section to 512 pixels wide.</p>
+				</section>
+				<section id="secStyleAlpha" class="indent" data-tags="alpha">
+					<h3 data-title>Transparency</h3>
+					<p>User-visible transparency (i.e. portions of the image which let parts of the background through) are not to be used.</p>
+				</section>
+				<section id="secStyleArea" class="indent" data-tags="area">
+					<h3 data-title>Valid Area</h3>
+					<p>The engine will trim the corners off of images in order to form a rounded rectangle with corner radii 1/20<sub>th</sub> of the image's width. These areas should thus not be used for elements that are critical for a user to understand the image.</p>
+				</section>
+				<section id="secStyleVerify" class="indent" data-tags="verify">
+					<h3 data-title>Verification</h3>
+					<p>This section describes some methods to help you ensure that your image follows some of the style guidelines. It is important to note that you should NOT deliver your images after applying any of the following steps: they are here to help you in creating your image, not as things that must be done before delivery.</p>
+					<section id="secStyleVerifySize" class="indent" data-tags="size resampling">
+						<h3 data-title>Verify: Image Size and Resampling</h3>
+						<p>The engine will perform <a target="_blank" href="http://en.wikipedia.org/wiki/Mipmap">mipmapping</a> on images using <a target="_blank" href="https://en.wikipedia.org/wiki/Lanczos_resampling">Lanczos resampling</a>, and then the web browser will use <a target="_blank" href="http://tech-algorithm.com/articles/nearest-neighbor-image-scaling/">nearest neighbour resampling</a> to make up the difference. You can use the following steps to determine if your image will look good after this process is applied.</p>
+						<p>I have an image that is 1920 pixels wide and the engine wants to resize it to 512 pixels wide.</p>
+						<p><img src="resources/inline/verify/resize0.png" class="style-img" /></p>
+						<p>Mipmaps are generated by taking the original image and repeatedly dividing the dimensions by 2. The mipmap the engine uses is the first mipmap that is greater than or equal to the target width.</p>
+						<p>Applying this process, dividing 1920 by 2 gives 960, which is larger than 512. Dividing 960 by 2 gives 480, which is smaller than 512. Therefore the mipmap that is 960 pixels across is the one used.</p>
+						<p>Mipmaps are generated using Lanczos resampling, so downscaling to 960 pixels wide should be done using the same method.</p>
+						<p><img src="resources/inline/verify/resize1.png" class="style-img" /></p>
+						<p>This downscaled image would then be given to the web browser, which automatically uses nearest neighbour resampling if the image it's given doesn't match the target width. In this case, 960 is not 512, so nearest neighbour resampling is done to get the image down to 512 pixels wide.</p>
+						<p><img src="resources/inline/verify/resize2.png" class="style-img" /></p>
+					</section>
+					<section id="secStyleVerifyArea" class="indent" data-tags="area">
+						<h4 data-title>Verify: Area</h4>
+						<p>The following steps can be used to emulate the rounded rectangle trimming effect in order to determine whether your image will look good with the trimming applied.</p>
+						<p>I have an image that is 1920 pixels wide.</p>
+						<p><img src="resources/inline/verify/border0.png" class="style-img" /></p>
+						<p>The corner radii of the rounded rectangle should be 1/20<sub>th</sub> of the image's width. 1920/20 = 96, so a rounded rectangle with a corner radius of 96 is drawn with the same dimensions as the image.</p>
+						<p><img src="resources/inline/verify/border2.png" class="style-img" /></p>
+						<p><img src="resources/inline/verify/border3.png" class="style-img" /></p>
+						<p>This rectangle's transparency channel is then pasted onto the main image.</p>
+						<p><img src="resources/inline/verify/border4.png" class="style-img" /></p>
+						<p><img src="resources/inline/verify/border5.png" class="style-img" /></p>
+					</section>
 				</section>
 			</section>
 		</div>

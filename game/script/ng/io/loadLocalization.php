@@ -1,17 +1,9 @@
 <?php
-	require_once("../errHandle.php");
+	require_once("load.php");
 
 	if (isset($_POST["lang"])) {
-		$path = "../../../localization/".urldecode($_POST["lang"]);
-		$i = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
-		foreach ($i as $value) {
-			if ($value !== "." && $value !== "..") {
-				$info = pathinfo($value);
-				if ($info["extension"] === "cfg") {
-					echo file_get_contents($value)."\n";
-				}
-			}
-		}
+		$absPath = "localization/".urldecode($_POST["lang"]);
+		load_cfg($absPath);
 	} else {
 		header("HTTP/1.0 400 Bad Request");
 		echo "lang not defined.";

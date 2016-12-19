@@ -2,6 +2,7 @@
 Ctrl+F headings:
 
 [ENGINE ERROR]
+[DEFAULT APPLIERS]
 [ELEMENT ID]
 [CONSTS]
 [UTIL FUNCTIONS]
@@ -35,6 +36,9 @@ Ctrl+F headings:
 [LOADING]
 */
 
+// TODO: Load state from io/loadState.php
+// TODO: Make sure nothing else is being loaded straight from file.
+// TODO: Refactor loading to support ppd filenames.
 // TODO: add room audio support
 
 // [ENGINE ERROR]
@@ -64,6 +68,75 @@ setupEngineError(this);
 Object.defineProperty(this,"Engine",{
 	value: Object.freeze(new (function() {
 		var _this = this;
+
+		// [DEFAULT APPLIERS]
+		// Set default values for args.
+		var _generateTypeOfFunc = function(type) {
+			return function(value) {
+				return typeof value === type;
+			};
+		};
+		var _generateInstanceOfFunc = function(ctor) {
+			return function(value) {
+				return value instanceof ctor;
+			};
+		};
+		var _defaultArg = function(arg,func,defaultBk) {
+			return func(arg) ? arg : defaultBk;
+		};
+		var _defaultFunc = function(value,func,defaultArg,defaultBk) {
+			return func(value) ? value : _defaultArg(defaultArg,func,defaultBk);
+		};
+		var _defaultTypeOf = function(value,type,defaultArg,defaultBk) {
+			return _defaultFunc(value,_generateTypeOfFunc(type),defaultArg,defaultBk);
+		};
+		this.defaultTemplate = function(value,a,defaultArg,defaultBk) {
+			var res;
+			var type = typeof a;
+			switch (type) {
+				case "string":
+					// Represents a type string
+					res = _defaultTypeOf(value,a,defaultArg,defaultBk);
+					breal;
+				case "function":
+					// Represents a complex function
+					res = _defaultFunc(value,a,defaultArg,defaultBk);
+					break;
+				default:
+					throw new EngineError("Second argument to function defaultTemplate must be of type 'string' or 'function', was '"+type+"'.",a);
+			}
+			return res;
+		};
+		this.defaultAny = function(value,defaultArg) {
+			return typeof value !== "undefined" ? value : _defaultArg(defaultArg,function(v) {
+				return typeof value !== "undefined";
+			},null);
+		};
+		this.defaultBool = function(bool,defaultArg) {
+			return _defaultTypeOf(bool,"boolean",defaultArg,false);
+		};
+		this.defaultNumber = function(n,defaultArg) {
+			return _defaultTypeOf(n,"number",defaultArg,0);
+		};
+		this.defaultString = function(str,defaultArg) {
+			return _defaultTypeOf(str,"string",defaultArg,"");
+		};
+		this.defaultArray = function(arr,defaultArg) {
+			return _defaultFunc(arr,Array.isArray,defaultArg,[]);
+		};
+		this.defaultFunction = function(func,defaultArg) {
+			return _defaultTypeOf(func,"function",defaultArg,function() {
+			});
+		};
+		this.defaultObject = function(obj,defaultArg) {
+			return _defaultTypeOf(obj,"object",defaultArg,{});
+		};
+		this.defaultInstanceOf = function(obj,ctor,defaultArg,fallback) {
+			return _defaultFunc(obj,_generateInstanceOfFunc(ctor),defaultArg,_this.defaultAny(fallback));
+		};
+		this.defaultRegex = function(regex,defaultArg) {
+			return _this.defaultInstanceOf(regex,RegExp,defaultArg,new RegExp());
+		};
 
 		// [ELEMENT ID]
 		// Localization markup element. Stores data about how to translate between localization markup and HTML.
@@ -365,70 +438,6 @@ Object.defineProperty(this,"Engine",{
 			}
 			return res;
 		};
-		var _generateTypeOfFunc = function(type) {
-			return function(value) {
-				return typeof value === type;
-			};
-		};
-		var _generateInstanceOfFunc = function(ctor) {
-			return function(value) {
-				return value instanceof ctor;
-			};
-		};
-		var _defaultArg = function(arg,type,default) {
-			return typeof arg === type ? arg : default;
-		};
-		var _defaultFunc = function(value,func,defaultArg,defaultBk) {
-			return func(value) ? value : _defaultArg(defaultArg,defaultBk);
-		};
-		var _defaultTypeOf = function(value,type,defaultArg,defaultBk) {
-			return _defaultFunc(value,_generateTypeOfFunc(type),defaultArg,defaultBk);
-		};
-		this.defaultTemplate = function(value,a,defaultArg,defaultBk) {
-			var res;
-			var type = typeof a;
-			switch (type) {
-				case "string":
-					// Represents a type string
-					res = _defaultTypeOf(value,a,defaultArg,defaultBk);
-					breal;
-				case "function":
-					// Represents a complex function
-					res = _defaultFunc(value,a,defaultArg,defaultBk);
-					break;
-				default:
-					throw new EngineError("Second argument to function defaultTemplate must be of type 'string' or 'function', was '"+type+"'.",a);
-			}
-			return res;
-		};
-		this.defaultAny = function(value,default) {
-			return typeof value !== "undefined" ? value : _defaultArg(default,null);
-		};
-		this.defaultBool = function(bool,default) {
-			return _defaultTypeOf(bool,"boolean",default,false);
-		};
-		this.defaultNumber = function(n,default) {
-			return _defaultTypeOf(n,"number",default,0);
-		};
-		this.defaultString = function(str,default) {
-			return _defaultTypeOf(str,"string",default,"");
-		};
-		this.defaultArray = function(arr,default) {
-			return _defaultFunc(arr,Array.isArray,default,[]);
-		};
-		this.defaultFunction = function(func,default) {
-			return _defaultTypeOf(func,"function",default,function() {
-			});
-		};
-		this.defaultObject = function(obj,default) {
-			return _defaultTypeOf(obj,"object",default,{});
-		};
-		this.defaultInstanceOf = function(obj,ctor,default,fallback) {
-			return _defaultFunc(obj,_generateInstanceOfFunc(ctor),default,_this.defaultAny(fallback));
-		};
-		this.defaultRegex = function(regex,default) {
-			return _this.defaultInstanceOf(regex,RegExp,default,new RegExp());
-		};
 		this.isEngineKey = function(key) {
 			if (key instanceof COM.String) {
 				key = key.unescapedString;
@@ -485,7 +494,6 @@ Object.defineProperty(this,"Engine",{
 			}
 		};
 		this.nodeEnforceOnlyTheseAssociations = function(node,whitelist) {
-			throwIfUnseen = _this.defaultBool(throwIfUnseen,true);
 			var notSeen = whitelist.slice(0);
 			node.associations.forEach(function(key) {
 				if (_this.isPermittedKey(key,whitelist)) {
@@ -518,7 +526,6 @@ Object.defineProperty(this,"Engine",{
 			}
 		};
 		this.nodeEnforceOnlyTheseChildren = function(node,whitelist) {
-			throwIfUnseen = _this.defaultBool(throwIfUnseen,true);
 			var notSeen = whitelist.slice(0);
 			node.children.forEach(function(child) {
 				if (_this.isPermittedKey(child.name,whitelist)) {
@@ -547,7 +554,7 @@ Object.defineProperty(this,"Engine",{
 			var seen = false;
 			var seenNode;
 			node.children.forEach(function(child) {
-				if (_this.isPermittedKey(child.name)) {
+				if (_this.isPermittedKey(child.name,whitelist)) {
 					if (seen) {
 						throw new EngineError("Node '"+node.name.unescapedString+"' format error: child nodes '"+child.name.unescapedString+"' and '"+seenNode.name.unescapedString+"' are mutually exclusive.",node,_getConfigStack(node));
 					} else {
@@ -598,7 +605,7 @@ Object.defineProperty(this,"Engine",{
 		this.nodeEnforceNoEngineChildren = function(node,whitelist) {
 			whitelist = _this.defaultArray(whitelist);
 			node.children.forEach(function(child) {
-				if (_isEngineKey(child.name) && !_this.isPermittedKey(entry,whitelist)) {
+				if (_this.isEngineKey(child.name) && !_this.isPermittedKey(entry,whitelist)) {
 					throw new EngineError("Node '"+node.name.unescapedString+"' format error: engine-prefixed child node '"+child.name.unescapedString+"' not permitted in this context.",node,_getConfigStack(node));
 				}
 			});
@@ -610,8 +617,8 @@ Object.defineProperty(this,"Engine",{
 			var _this2 = this;
 			var _vars = {};
 			var _children = [];
-			var _assocWhitelist = this.defaultArray(engineAssocWhitelist);
-			var _childWhitelist = this.defaultArray(engineChildWhitelist);
+			var _assocWhitelist = _this.defaultArray(engineAssocWhitelist);
+			var _childWhitelist = _this.defaultArray(engineChildWhitelist);
 			var _parent = null;
 
 			var _defineMethod = function(name,func) {
@@ -891,7 +898,7 @@ Object.defineProperty(this,"Engine",{
 					for (var key in _groups) {
 						if (_groups.hasOwnProperty(key)) {
 							value = _groups[key];
-							callback(key,value,_this2.isEngikeKey(key));
+							callback(key,value,_this.isEngineKey(key));
 						}
 					}
 				});
@@ -902,7 +909,7 @@ Object.defineProperty(this,"Engine",{
 					return _this2.hasString(key) ? _strings[key] : undefined;
 				});
 				_defineMethod("setString",function(key,value) {
-					if (_this2.isEngineKey(key)) {
+					if (_this.isEngineKey(key)) {
 						if (!_this2.isAllowedNgString(key)) {
 							throw new EngineError("Cannot define localization string with key '"+key+"': that is not a permitted engine key for strings.",key);
 						}
@@ -1012,7 +1019,7 @@ Object.defineProperty(this,"Engine",{
 					return _this2.hasGroup(key) ? _groups[key] : undefined;
 				});
 				_defineMethod("setGroup",function(key,value) {
-					if (_this2.isEngineKey(key)) {
+					if (_this.isEngineKey(key)) {
 						if (!_this2.isAllowedNgGroup(key)) {
 							throw new EngineError("Cannot define localization group with key '"+key+"': that is not a permitted engine key for groups.",key);
 						}
@@ -2398,7 +2405,7 @@ Object.defineProperty(this,"Engine",{
 					res.defineVariable(key,value.unescapedString);
 				});
 				node.children.forEach(function(child) {
-					res.addChild(_parseState(child));
+					res.addChild(_parseState(child,false));
 				});
 				if (isFirstCall && !res.hasVariable(_this.Consts.definition.STATE_LOCATION)) {
 					throw new EngineError("State definition is missing required association '"+_this.Consts.definition.STATE_LOCATION+"'.",_state,_getConfigStack(node));
@@ -2433,7 +2440,7 @@ Object.defineProperty(this,"Engine",{
 				_objects = {};
 				_this.nodeEnforceNoEntries(map.globalNode);
 				_this.nodeEnforceNoAssociations(map.globalNode);
-				-this.nodeEnforceNoEngileChildren(map.globalNode);
+				_this.nodeEnforceNoEngineChildren(map.globalNode);
 				map.globalNode.children.forEach(function(child) {
 					change(child);
 					id = child.name.unescapedString;
@@ -2488,7 +2495,9 @@ Object.defineProperty(this,"Engine",{
 					});
 				},map.globalNode);
 			} catch (e) {
-				e.message += " (in graph edge from \""+from.unescapedString+"\" to \""+to.unescapedString+"\")";
+				if (typeof from !== "undefined" && typeof to !== "undefined") {
+					e.message += " (in graph edge from \""+from.unescapedString+"\" to \""+to.unescapedString+"\")";
+				}
 				throw e;
 			}
 		};
@@ -2593,6 +2602,7 @@ Object.defineProperty(this,"Engine",{
 			});
 			var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 			_wrapCallback(req3,manager,function(res) {
+				console.log(res.text);
 				_stateMap = new COM.Map(res.text);
 			});
 			var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_IMAGES);
