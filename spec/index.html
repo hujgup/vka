@@ -97,11 +97,10 @@ FREE USE:
 						<table id="charDataTable" class="hs-table char-data-table" data-sortable>
 							<tbody data-children>
 								<tr>
-									<!-- TODO: Sortable table API and styling. Everything here, plus data-sort-comparer for custom comparison functions. Headings with no data-sort-x attribute cannot be sorted. -->
 									<th scope="col" data-sort-preset="initial-order">Character</th>
 									<th scope="col" data-sort-preset="ascii-trim-nocase">Sexual Organs</th>
 									<th scope="col" data-sort-preset="initial-order">Blood Color</th>
-									<th scope="col" data-sort-preset="initial-order">Skin Color</th>
+									<th scope="col" data-sort-preset="initial-order">Base Skin Color</th>
 									<th scope="col">Clothing Reference</th>
 									<th scope="col">Body Type Reference</th>
 									<th scope="col" data-sort-preset="ascii-trim-nocase">Additional Notes</th>
@@ -251,6 +250,163 @@ FREE USE:
 									<td><img src="resources/inline/clothes/x.png" class="thumb-img" /></td>
 									<td><img src="x" class="thumb-img" /></td>
 									<td></td>
+								</tr>
+-->
+							</tbody>
+						</table>
+					</section>
+					<section id="secSettingsCharsCols" class="indent" data-tags="coloration">
+						<h4 data-table>Color Table</h4>
+						<table id="colTable" class="hs-table col-table">
+							<tbody data-children>
+								<tr>
+									<th scope="col">Character</th>
+									<th scope="col">True Blood Color</th>
+									<th scope="col">Base Skin Color</th>
+									<th scope="col">Base Hair Color</th>
+									<th scope="col">Base Flushed Skin Color</th>
+									<th scope="col">Base Lipstick Color</th>
+<!--
+									<th scope="col">x</th>
+-->
+								</tr>
+								<tr id="secSettingCharsColsJohn" data-tags="john">
+									<th scope="row" data-title>John Egbert</th>
+									<td data-show-color>Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td data-show-color>#151515</td>
+									<td data-show-color>Human</td>
+									<td data-show-color>N/A</td>
+								</tr>
+								<tr id="secSettingCharsColsRose" data-tags="rose">
+									<th scope="row" data-title>Rose Lalonde</th>
+									<td data-show-color>Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td data-show-color>#F5F5F5</td>
+									<td data-show-color>Human</td>
+									<td data-show-color>N/A</td>
+								</tr>
+								<tr id="secSettingCharsColsDave" data-tags="dave">
+									<th scope="row" data-title>Dave Strider</th>
+									<td data-show-color>Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td data-show-color>#F5F5F5</td>
+									<td data-show-color>Human</td>
+									<td data-show-color>N/A</td>
+								</tr>
+								<tr id="secSettingCharsColsJade" data-tags="jade">
+									<th scope="row" data-title>Jade Harley</th>
+									<td data-show-color>Human</td>
+									<td data-show-color>#FFFFFF</td>
+									<td data-show-color>#151515</td>
+									<td data-show-color>Human</td>
+									<td data-show-color>N/A</td>
+								</tr>
+								<!--
+									Troll coloration logic:
+										rgb(skin) = 0xC0 + floor(rgb(blood)/22)
+										rgb(hair) = 0x15 + floor(rgb(blood)/22)
+										hsv[h](temp1) = hsv[h](blood)
+										hsv[s](temp1) = trim_to_range(round(0.58*hsv[s](blood)),0,100)
+										hsv[v](temp1) = trim_to_range(round(1.16*hsv[v](blood)),0,100)
+										rgb(flush) = floor((rgb(blood) + 2*rgb(temp1))/3)
+								-->
+								<tr id="secSettingCharsColsAradia" data-tags="aradia">
+									<th scope="row" data-title>Aradia Megido</th>
+									<td data-show-color>#A10000</td>
+									<td data-show-color>#C7C0C0</td>
+									<td data-show-color>#1C1515</td>
+									<td data-show-color>#B13434</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsTavros" data-tags="tavros">
+									<th scope="row" data-title>Tavros Nitram</th>
+									<td data-show-color>#A25203</td>
+									<td data-show-color>#C7C3C0</td>
+									<td data-show-color>#1C1815</td>
+									<td data-show-color>#B27236</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsSollux" data-tags="sollux">
+									<th scope="row" data-title>Sollux Captor</th>
+									<td data-show-color>#A1A100</td>
+									<td data-show-color>#C7C7C0</td>
+									<td data-show-color>#1C1C15</td>
+									<td data-show-color>#B1B134</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsKarkat" data-tags="karkat">
+									<th scope="row" data-title>Karkat Vantas</th>
+									<td data-show-color>#F20000</td>
+									<td data-show-color>#CBC0C0</td>
+									<td data-show-color>#201515</td>
+									<td data-show-color>#FA4747</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsNepeta" data-tags="nepeta">
+									<th scope="row" data-title>Nepeta Leijon</th>
+									<td data-show-color>#2E4800</td>
+									<td data-show-color>#C2C3C0</td>
+									<td data-show-color>#171815</td>
+									<td data-show-color>#3A4E16</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsKanaya" data-tags="kanaya">
+									<th scope="row" data-title>Kanaya Maryam</th>
+									<td data-show-color>#078446</td>
+									<td data-show-color>#C0C6C3</td>
+									<td data-show-color>#151B18</td>
+									<td data-show-color>#2F9060</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsTerezi" data-tags="terezi">
+									<th scope="row" data-title>Terezi Pyrope</th>
+									<td data-show-color>#008282</td>
+									<td data-show-color>#C0C5C5</td>
+									<td data-show-color>#151A1A</td>
+									<td data-show-color>#298D8D</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsVriska" data-tags="vriska">
+									<th scope="row" data-title>Vriska Serket</th>
+									<td data-show-color>#004182</td>
+									<td data-show-color>#C0C3C6</td>
+									<td data-show-color>#15181B</td>
+									<td data-show-color>#295B8D</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsEquius" data-tags="equius">
+									<th scope="row" data-title>Equius Zahhak</th>
+									<td data-show-color>#0021CB</td>
+									<td data-show-color>#C0C1C9</td>
+									<td data-show-color>#15161E</td>
+									<td data-show-color>#415BDF</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsEridan" data-tags="eridan">
+									<th scope="row" data-title>Eridan Ampora</th>
+									<td data-show-color>#6A006A</td>
+									<td data-show-color>#C4C0C4</td>
+									<td data-show-color>#191519</td>
+									<td data-show-color>#742274</td>
+									<td data-show-color>#x</td>
+								</tr>
+								<tr id="secSettingCharsColsFeferi" data-tags="feferi">
+									<th scope="row" data-title>Feferi</th>
+									<td data-show-color>#99004D</td>
+									<td data-show-color>#C6C0C3</td>
+									<td data-show-color>#1B1518</td>
+									<td data-show-color>#A9316F</td>
+									<td data-show-color>#x</td>
+								</tr>
+<!--
+								<tr id="secSettingCharsColsX" data-tags="">
+									<th scope="row" data-title>x</th>
+									<td data-show-color>#x</td>
+									<td data-show-color>#x</td>
+									<td data-show-color>#x</td>
+									<td data-show-color>#x</td>
+									<td data-show-color>#x</td>
 								</tr>
 -->
 							</tbody>

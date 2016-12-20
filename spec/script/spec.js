@@ -244,13 +244,16 @@ function setupMakeLink(tagLogicInput) {
 	});
 }
 function setupColorCells() {
+	var verifyRegex = /^#[0-9A-F]{6}$/;
 	var cells = document.querySelectorAll("[data-show-color]");
 	var cell;
 	for (var i = 0; i < cells.length; i++) {
 		cell = cells[i];
 		cell.className = "mono color-cell";
-		cell.style.backgroundColor = cell.textContent;
-		cell.style.color = getTextColor(cell.textContent);
+		if (verifyRegex.test(cell.textContent)) {
+			cell.style.backgroundColor = cell.textContent;
+			cell.style.color = getTextColor(cell.textContent);
+		}
 	}
 }
 function wrapElementInLink(ele,href) {

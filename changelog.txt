@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.5.0.0 (3)
+## v0.5.0.0 (4)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -29,7 +29,7 @@
 * Fixed bug where escaping trailing whitespace in cfg files was not working properly.
 * Changed spec filters so that they hide content as well as navigation links.
 * Refactored spec JavaScript to be more maintainable.
-* Updated spec with details about the AU, the worlds, an image style guide, and extended character data.
+* Updated spec with details about the AU, the worlds, an image style guide, extended character data, and a character coloration guide.
 * Consolidated spec character data into one table.
 * Changed version numbering semantics: Added trailing component detailing commit number, starting from 1 (so that I can push to Git while in the middle of writing an update). "b" component now used for refactors.
 
