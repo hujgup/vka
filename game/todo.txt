@@ -9,5 +9,8 @@ On move action happens
 
 Setup actions so that game is playable
 
+Add support for rooms that play audio.
+
+Minimap stuff
 
 

@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.5.0.0 (4)
+## v0.5.0.0 (5)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,11 +10,10 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.5.0.0 (current, unfinished)
+## v0.5.0.0 (current)
 * Added scripted localization for image crediting and audio crediting, so that the artist is mentioned.
 * Added "raw text" localization element "r".
 * Added parsing support for rooms that have additional custom actions, or custom actions that override the default ones.
-* Added support for rooms that play audio.
 * Added public functions for resolving default arguments.
 * Added a runtime error logging method.
 * Exposed node structure enforcement methods.

@@ -38,7 +38,12 @@ function LogicSplitNode(left,right) {
 	this.left = left;
 	this.right = right;
 	this.resolve = function(whitelist) {
-		return this.logic(this.left.resolve(whitelist),this.right.resolve(whitelist));
+		// Passing functions to take advantage of short-circuit optimization
+		return this.logic(function() {
+			return this.left.resolve(whitelist);
+		},function() {
+			return this.right.resolve(whitelist);
+		});
 	};
 	this.logic = function(left,right) {
 		throw new Error("Abstract method \"logic\" not implemented.");
@@ -49,7 +54,7 @@ LogicSplitNode.prototype.constructor = LogicSplitNode;
 function LogicAndNode(left,right) {
 	LogicSplitNode.call(this,left,right);
 	this.logic = function(left,right) {
-		return left && right;
+		return left() && right();
 	};
 }
 LogicAndNode.prototype = LogicSplitNode.prototype;
@@ -57,7 +62,7 @@ LogicAndNode.prototype.constructor = LogicAndNode;
 function LogicOrNode(left,right) {
 	LogicSplitNode.call(this,left,right);
 	this.logic = function(left,right) {
-		return left || right;
+		return left() || right();
 	};
 }
 LogicOrNode.prototype = LogicSplitNode.prototype;
@@ -65,6 +70,8 @@ LogicOrNode.prototype.constructor = LogicOrNode;
 function LogicXorNode(left,right) {
 	LogicSplitNode.call(this,left,right);
 	this.logic = function(left,right) {
+		left = left();
+		right = right();
 		return (left || right) && !(left && right);
 	};
 }

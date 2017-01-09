@@ -2578,6 +2578,7 @@ Object.defineProperty(this,"Engine",{
 			var query = location.search;
 			if (query.length !== 0) {
 				var kvps = query.split("&");
+				query = {};
 				var kvp;
 				for (var i = 0; i < kvps.length; i++) {
 					kvp = kvps[i].split("=");
