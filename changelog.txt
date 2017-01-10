@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.5.0.0 (5)
+## v0.6.0.0 (1)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,7 +10,17 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.5.0.0 (current)
+## v0.6.0.0 (current)
+* Game is now playable.
+* Implemented action system GUI.
+* Actions now have an @name association, for the user-visible action name.
+* Actions can now define custom "Perform Action" button text.
+* Rooms can now specify that they should have no actions, only giving the player the option to continue to a specified next action.
+* Added game/common/ng/minimap.cfg in preparation for future features.
+* Fixed bugs to do with filename cfg elements in loading.
+* Fixed bug in EngineCommand.ngCatch where _getConfigStack was sometimes getting called on an undefined node.
+
+## v0.5.0.0
 * Added scripted localization for image crediting and audio crediting, so that the artist is mentioned.
 * Added "raw text" localization element "r".
 * Added parsing support for rooms that have additional custom actions, or custom actions that override the default ones.

@@ -234,3 +234,12 @@ html, body {
 .image-container {
 	position:relative;
 }
+.actions-list {
+	list-style-type:none;
+	margin:0;
+	padding:0;
+}
+.actions-list > li {
+	display:inline-block;
+	padding-right:8px;
+}

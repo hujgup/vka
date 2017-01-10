@@ -3,3 +3,5 @@ sylladex/bottomBgMask.png|1480162155
 sylladex/card.png|1480162386
 sylladex/textMask.png|1480162353
 sylladex/topBgMask.png|1480162155
+bp.png|1483964380
+bp2.png|1483964414

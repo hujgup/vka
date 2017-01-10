@@ -27,6 +27,7 @@ Ctrl+F headings:
 [COMMANDS - LIMITS]
 [COMMANDS - LIMIT LOGIC]
 [NG OBJECT REFERENCES]
+[PLAYER ACTIONS]
 [VARS]
 [STATE WRAPPERS]
 [ACTIONS]
@@ -36,9 +37,11 @@ Ctrl+F headings:
 [LOADING]
 */
 
+// TODO: Only show "Move", "Examine", and "Interact" actions if there are available sub-actions
+// TODO: For each object that reads localization keys from a cfg node, verify that
+// 	those keys exist (_this.LocalizationMap.hasString(x) || .hasGroup(x))
 // TODO: Load state from io/loadState.php
 // TODO: Make sure nothing else is being loaded straight from file.
-// TODO: Refactor loading to support ppd filenames.
 // TODO: add room audio support
 
 // [ENGINE ERROR]
@@ -88,7 +91,19 @@ Object.defineProperty(this,"Engine",{
 			return func(value) ? value : _defaultArg(defaultArg,func,defaultBk);
 		};
 		var _defaultTypeOf = function(value,type,defaultArg,defaultBk) {
-			return _defaultFunc(value,_generateTypeOfFunc(type),defaultArg,defaultBk);
+			var func = _generateTypeOfFunc(type);
+			var res;
+			if (func(value)) {
+				res = value;
+			} else if (func(defaultArg)) {
+				res = defaultArg;
+			} else if (type !== "function" && typeof defaultArg === "function") {
+				// Allowing people to only construct values when actually needed
+				res = defaultArg();
+			} else {
+				res = defaultBk;
+			}
+			return res;
 		};
 		this.defaultTemplate = function(value,a,defaultArg,defaultBk) {
 			var res;
@@ -257,6 +272,13 @@ Object.defineProperty(this,"Engine",{
 						this.ACTION_MOVE = _this2.CONFIG_ENGINE_PREFIX+"actionMove";
 						this.ACTION_EXAMINE = _this2.CONFIG_ENGINE_PREFIX+"actionExamine";
 						this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"actionInteract";
+						this.ACTION_NULL = _this2.CONFIG_ENGINE_PREFIX+"actionNull";
+						this.ACTION_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"actionPerform";
+						this.ACTION_CONTINUE = _this2.CONFIG_ENGINE_PREFIX+"actionContinue";
+						this.ACTION_MOVE_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"actionMovePerform";
+						this.ACTION_EXAMINE_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"actionExaminePerform";
+						this.ACTION_INTERACT_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"actionInteractPerform";
+						this.ACTION_ARCHIVE_DELIM = _this2.CONFIG_ENGINE_PREFIX+"actionArchiveDelim";
 						this.QUEST_LOG_EMPTY = _this2.CONFIG_ENGINE_PREFIX+"questLogEmpty";
 						this.CONCAT_IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatImageSource";
 						this.CONCAT_AUDIO_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatAudioSource";
@@ -282,9 +304,11 @@ Object.defineProperty(this,"Engine",{
 					this.ROOM_CONTENTS = _this2.CONFIG_ENGINE_PREFIX+"contents";
 					this.ROOM_APPEND_ACTIONS = _this2.CONFIG_ENGINE_PREFIX+"actionsAdd";
 					this.ROOM_OVERRIDE_ACTIONS = _this2.CONFIG_ENGINE_PREFIX+"actionsRemove";
+					this.ROOM_CONTINUE_ACTION = _this2.CONFIG_ENGINE_PREFIX+"continue";
 					this.STATE_LOCATION = _this2.CONFIG_ENGINE_PREFIX+"location";
 					this.ACTION_DO = _this2.CONFIG_ENGINE_PREFIX+"do";
 					this.ACTION_SUBACTIONS = _this2.CONFIG_ENGINE_PREFIX+"subActions";
+					this.ACTION_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"perform";
 				})());
 				this.execution = Object.freeze(new (function() {
 					var _this3 = this;
@@ -296,6 +320,8 @@ Object.defineProperty(this,"Engine",{
 					this.ACTION_INTERACT = _this2.CONFIG_ENGINE_PREFIX+"interact";
 					this.ACTION_INTERACT_OBJECT = this.ACTION_EXAMINE_OBJECT;
 					this.ACTION_LOG = _this2.CONFIG_ENGINE_PREFIX+"log";
+					this.ACTION_ROOT = _this2.CONFIG_ENGINE_PREFIX+"root";
+					this.ACTION_NULL = _this2.CONFIG_ENGINE_PREFIX+"null";
 					this.FLOW_IF = _this2.CONFIG_ENGINE_PREFIX+"if";
 					this.FLOW_CONDITION = _this2.CONFIG_ENGINE_PREFIX+"limit";
 					this.FLOW_THEN = _this2.CONFIG_ENGINE_PREFIX+"then";
@@ -450,6 +476,13 @@ Object.defineProperty(this,"Engine",{
 			}
 			return whitelist.indexOf(key) !== -1;
 		};
+		this.objectForEach = function(obj,callback) {
+			for (var key in obj) {
+				if (obj.hasOwnProperty(key)) {
+					callback(key,obj[key],obj);
+				}
+			}
+		};
 		this.stripHTML = function(str) {
 			var div = document.createElement("div");
 			div.innerHTML = str;
@@ -520,7 +553,7 @@ Object.defineProperty(this,"Engine",{
 			if (_objectCountKeys(notSeen) > 0) {
 				for (var key in notSeen) {
 					if (notSeen.hasOwnProperty(key) && !notSeen[key]) {
-						throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association '"+notSeen[key]+"'.",node,_getConfigStack(node));
+						throw new EngineError("Node '"+node.name.unescapedString+"' format error: missing required association '"+key+"'.",node,_getConfigStack(node));
 					}
 				}
 			}
@@ -585,6 +618,17 @@ Object.defineProperty(this,"Engine",{
 					}
 				}
 			}
+		};
+		this.nodeEnforceNoneOfTheseChildren = function(node,children,reason) {
+			children.forEach(function(child) {
+				if (node.hasChildNamed(child)) {
+					var msg = "Node '"+node.name.unescapedString+"' format error: child '"+child+"' is not permitted in this context.";
+					if (typeof reason !== "undefined") {
+						msg += " Reason: "+reason;
+					}
+					throw new EngineError(msg,node,_getConfigStack(node));
+				}
+			});
 		};
 		this.nodeEnforceNoEngineEntries = function(node,whitelist) {
 			whitelist = _this.defaultArray(whitelist);
@@ -794,7 +838,7 @@ Object.defineProperty(this,"Engine",{
 				var stack = "";
 				if (Array.isArray(e.configStack)) {
 					//e.configStack.reverse();
-					stack = e.configStack.join("/");
+					stack = e.configStack.join(" -> ");
 					msg += "\nConfig stack: "+stack;
 				}
 				console.error(msg);
@@ -1065,12 +1109,12 @@ Object.defineProperty(this,"Engine",{
 				try {
 					callback();
 				} catch (e) {
-					if (e instanceof EngineError) {
-						if (e.configStack.length === 0) {
+					if (typeof node !== "undefined") {
+						if (e instanceof EngineError && (typeof e.configStack === "undefined" || e.configStack.length === 0)) {
 							e.configStack = _getConfigStack(node);
+						} else {
+							e = new EngineError(e.message,this,_getConfigStack(node));
 						}
-					} else {
-						e = new EngineError(e.message,this,_getConfigStack(node));
 					}
 					throw e;
 				}
@@ -1116,15 +1160,24 @@ Object.defineProperty(this,"Engine",{
 			};
 
 			this.internalExecute = function(context) {
-				context = _this.defaultObject(context,{
-					stack: new EngineCommand.ScopeStack(_state),
-					logBroken: false
-				});
 				this.forEach(function(cmd) {
 					cmd.execute(context);
 				});
 			};
 			this.execute = function(context) {
+				var creator = function() {
+					return {
+						stack: new EngineCommand.ScopeStack(_state),
+						logBroken: false
+					};
+				};
+				if (typeof context === "boolean") {
+					var temp = creator();
+					temp.logBroken = context;
+					context = temp;
+				} else {
+					context = _this.defaultObject(context,creator);
+				}
 				this.ngCatch(function() {
 					_this2.internalExecute(context);
 				});
@@ -1237,7 +1290,7 @@ Object.defineProperty(this,"Engine",{
 				return _stack.pop();
 			};
 		};
-		EngineCommand.NO_OP = new EngineCommand();
+		EngineCommand.NO_OP = new EngineCommand(null);
 		EngineCommand.prototype.constructor = EngineCommand;
 		// [COMMANDS - SCOPING]
 		// Controls moving the scoping stack into a child scope.
@@ -1313,7 +1366,7 @@ Object.defineProperty(this,"Engine",{
 			var _this2 = this;
 			var _to;
 			this.internalExecute = function(context) {
-				_movePlayer(_to);
+				_movePlayer(_to,context);
 			};
 			this.ngCatch(function() {
 				_this2.nodeName = node.name.unescapedString;
@@ -1333,7 +1386,8 @@ Object.defineProperty(this,"Engine",{
 			var _this2 = this;
 			var _object;
 			this.internalExecute = function(context) {
-				_examineObject(_object,context.logBroken);
+				_examineObject(_object,!context.logBroken);
+				context.logBroken = true;
 			};
 			this.ngCatch(function() {
 				_this2.nodeName = node.name.unescapedString;
@@ -1383,6 +1437,7 @@ Object.defineProperty(this,"Engine",{
 				} else {
 					_this.logPush(id);
 				}
+				context.logBroken = true;
 			};
 			this.internalExecute = function(context) {
 				_strings.forEach(function(id) {
@@ -2001,6 +2056,7 @@ Object.defineProperty(this,"Engine",{
 					this.mipmap.draw(_imageEle,this.artist,this.source);
 				}
 			};
+			this.wrappedNode = node;
 		};
 		var ObjectReference = function(id,node) {
 			_this.nodeEnforceNoEntries(node);
@@ -2022,8 +2078,9 @@ Object.defineProperty(this,"Engine",{
 			this.name = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
 			this.desc = node.getAssociation(_this.Consts.definition.DESC).unescapedString;
 			this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).unescapedString) : false;
-			this.onInteract = _hasOngoingInteract ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
-			this.onFirstInteract = _hasFirstInteract ? new EngineCommand(node.getChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT)) : EngineCommand.NO_OP;
+			this.onInteract = _hasOngoingInteract ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
+			this.onFirstInteract = _hasFirstInteract ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT)) : EngineCommand.NO_OP;
+			this.interactable = _hasFirstInteract || _hasOngoingInteract;
 			this.interact = function() {
 				if (this.interactable) {
 					if (_firstInteract) {
@@ -2046,32 +2103,7 @@ Object.defineProperty(this,"Engine",{
 				},
 				enumerable: true
 			});
-		};
-		var Action = function(id,node) {
-			_this.nodeEnforceNoEntries(node);
-			_this.nodeEnforceNoAssociations(node);
-			var children = [_this.Consts.definition.ACTION_DO,_this.Consts.definition.ACTION_SUBACTIONS];
-			var childrenObj = {};
-			for (var i = 0; i < children.length; i++) {
-				childrenObj[children[i]] = true;
-			}
-			_this.nodeEnforceChildrenComplex(node,childrenObj,true);
-			_this.nodeEnforceMutexChildren(node,children);
-
-			var _this2 = this;
-			this.id = id;
-			this.isFinalAction = node.hasChildNamed(_this.Consts.definition.ACTION_DO);
-			this.command = this.isFinalAction ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.ACTION_DO)) : null;
-			this.subActions = null;
-			if (!this.isFinalAction) {
-				var subDef = node.getChildNamed(_this.Consts.definition.ACTION_SUBACTIONS);
-				_this.nodeEnforceNoAssociations(subDef);
-				_this.nodeEnforceNoChildren(subDef);
-				_this.nodeEnforceAtLeastOneEntry(subDef);
-				this.subActions = subDef.entries.map(function(entry) {
-					return entry.unescapedString;
-				});
-			}
+			this.wrappedNode = node;
 		};
 		var Room = function(id,node) {
 			_this.nodeEnforceNoEntries(node);
@@ -2079,11 +2111,17 @@ Object.defineProperty(this,"Engine",{
 			assocs[_this.Consts.definition.NAME] = false;
 			assocs[_this.Consts.definition.DESC] = false;
 			assocs[_this.Consts.definition.ROOM_IMAGE] = true;
+			assocs[_this.Consts.definition.ROOM_CONTINUE_ACTION] = true;
 			_this.nodeEnforceAssociationsComplex(node,assocs,true);
 			var children = {};
 			children[_this.Consts.definition.ROOM_CONTENTS] = true;
-			children[_this.Consts.definition.ROOM_APPEND_ACTIONS] = true;
-			children[_this.Consts.definition.ROOM_OVERRIDE_ACTIONS] = true;
+			var _hasContinue = node.hasAssociation(_this.Consts.definition.ROOM_CONTINUE_ACTION);
+			if (_hasContinue) {
+				_this.nodeEnforceNoneOfTheseChildren(node,[_this.Consts.definition.ROOM_APPEND_ACTIONS,_this.Consts.definition.ROOM_OVERRIDE_ACTIONS],_this.Consts.definition.ROOM_CONTINUE_ACTION+" overrides the action menu.");
+			} else {
+				children[_this.Consts.definition.ROOM_APPEND_ACTIONS] = true;
+				children[_this.Consts.definition.ROOM_OVERRIDE_ACTIONS] = true;
+			}
 			_this.nodeEnforceChildrenComplex(node,children,true);
 
 			var _this2 = this;
@@ -2093,11 +2131,18 @@ Object.defineProperty(this,"Engine",{
 			this.imageId = node.hasAssociation(_this.Consts.definition.ROOM_IMAGE) ? node.getAssociation(_this.Consts.definition.ROOM_IMAGE).unescapedString : null;
 			//this.audioId // TODO
 			this.contents = [];
-			this.actions = [_this.Consts.execution.ACTION_MOVE,_this.Consts.execution.ACTION_EXAMINE,_this.Consts.execution.ACTION_INTERACT];
+			this.hasContinue = _hasContinue;
+			this.actions = _hasContinue ? [node.getAssociation(_this.Consts.definition.ROOM_CONTINUE_ACTION).unescapedString] : [_this.Consts.execution.ACTION_MOVE,_this.Consts.execution.ACTION_EXAMINE,_this.Consts.execution.ACTION_INTERACT];
 			this.getImage = function() {
 				return this.imageId !== null ? _images[this.imageId] : _imageAlpha;
 			};
-			
+			this.getActionObjects = function() {
+				return this.actions.reduce(function(obj,actionId) {
+					obj[actionId] = _actions[actionId];
+					return obj;
+				},{});
+			};
+
 			if (node.hasChildNamed(_this.Consts.definition.ROOM_CONTENTS)) {
 				node.getChildNamed(_this.Consts.definition.ROOM_CONTENTS).entries.forEach(function(entry) {
 					if (_objects.hasOwnProperty(entry.unescapedString)) {
@@ -2129,16 +2174,21 @@ Object.defineProperty(this,"Engine",{
 					_this2.actions.push(entry.unescapedString);
 				});
 			}
+			this.wrappedNode = node;
 		};
 		var Graph = function() {
 			var _arr = [];
+			this.getEdgesFrom = function(from) {
+				return _arr.filter(function(edge) {
+					return edge.from.id === from.id;
+				});
+			};
+			this.getEdgesTo = function(to) {
+				return _arr.filter(function(edge) {
+					return edge.to.id === to.id;
+				});
+			};
 			this.getEdge = function(from,to) {
-/*
-				if (typeof to !== "undefined") {
-					to = from.to.id;
-					from = from.from.id;
-				}
-*/
 				var res;
 				var entry;
 				for (var i = 0; i < _arr.length; i++) {
@@ -2151,7 +2201,7 @@ Object.defineProperty(this,"Engine",{
 				return res;
 			};
 			this.push = function(edge) {
-				if (typeof this.getEdge(edge) !== "undefined") {
+				if (typeof this.getEdge(edge.from,edge.to) !== "undefined") {
 					throw new EngineError("Cannot push edge ("+edge.from.id+", "+edge.to.id+") because that edge is already defined.",edge);
 				} else {
 					_arr.push(edge);
@@ -2171,21 +2221,123 @@ Object.defineProperty(this,"Engine",{
 			var _hasOngoingTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL);
 			this.from = _rooms[from.unescapedString];
 			this.to = _rooms[to.unescapedString];
-			this.onFirstTraversal = _hasFirstTraversal ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
-			this.onTraversal = _hasOngoingTraversal ? new EngineCommand(node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
-			this.traverse = function() {
-				_updateLocation(to);
+			this.onFirstTraversal = _hasFirstTraversal ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.onTraversal = _hasOngoingTraversal ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
+			this.traverse = function(context) {
+				_updateLocation(to.unescapedString);
 				if (_firstTraversal) {
 					_firstTraversal = false;
-					if (_this.hasFirstTraversal) {
-						this.onFirstTraversal.execute();
-					} else {
-						this.onTraversal.execute();
+					if (_hasFirstTraversal) {
+						this.onFirstTraversal.execute(context);
+					} else if (_hasOngoingTraversal) {
+						this.onTraversal.execute(context);
 					}
-				} else {
-					this.onTraversal.execute();
+				} else if (_hasOngoingTraversal) {
+					this.onTraversal.execute(context);
 				}
 			};
+			this.wrappedNode = node;
+		};
+
+		// [PLAYER ACTIONS]
+		// Actions the player can perform.
+		var AbstractAction = function(id) {
+			this.id = id;
+			this.isFinalAction = false;
+			this.nameKey = null;
+			this.performKey = null;
+			this.command = null;
+			this.subActions = null;
+		};
+		var Action = function(id,node) {
+			_this.nodeEnforceNoEntries(node);
+			var children = [_this.Consts.definition.ACTION_DO,_this.Consts.definition.ACTION_SUBACTIONS];
+			var childrenObj = {};
+			for (var i = 0; i < children.length; i++) {
+				childrenObj[children[i]] = true;
+			}
+			_this.nodeEnforceChildrenComplex(node,childrenObj,true);
+			_this.nodeEnforceMutexChildren(node,children);
+			var assocs = {};
+			assocs[_this.Consts.definition.NAME] = false;
+			var _isFinalAction = node.hasChildNamed(_this.Consts.definition.ACTION_DO);
+			if (_isFinalAction) {
+				assocs[_this.Consts.definition.ACTION_PERFORM] = true;
+			}
+			_this.nodeEnforceAssociationsComplex(node,assocs,true);
+
+			AbstractAction.call(this,id);
+			var _this2 = this;
+			this.nameKey = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
+			this.performKey = node.hasAssociation(_this.Consts.definition.ACTION_PERFORM) ? node.getAssociation(_this.Consts.definition.ACTION_PERFORM).unescapedString : _this.Consts.localization.configKeys.ACTION_PERFORM;
+			this.isFinalAction = _isFinalAction;
+			if (this.isFinalAction) {
+				this.command = new EngineCommand(null,node.getChildNamed(_this.Consts.definition.ACTION_DO));
+			} else {
+				var subDef = node.getChildNamed(_this.Consts.definition.ACTION_SUBACTIONS);
+				_this.nodeEnforceNoAssociations(subDef);
+				_this.nodeEnforceNoChildren(subDef);
+				_this.nodeEnforceAtLeastOneEntry(subDef);
+				this.subActions = subDef.entries.map(function(entry) {
+					return entry.unescapedString;
+				});
+			}
+			this.wrappedNode = node;
+		};
+		Action.makeCtor = function(id,child) {
+			return function() {
+				Action.call(this,id,child);
+			};
+		};
+		var MoveActionRoom = function(room) {
+			AbstractAction.call(this,room.id);
+			this.nameKey = room.name;
+			this.performKey = _this.Consts.localization.configKeys.ACTION_MOVE_PERFORM;
+			this.isFinalAction = true;
+			var map = new COM.Map("");
+			map.globalNode.setAssociation(_this.Consts.execution.ACTION_MOVE_TO,room.id);
+			this.command = new MoveCommand(null,map.globalNode);
+		};
+		var MoveAction = function(currentRoom) {
+			AbstractAction.call(this,_this.Consts.execution.ACTION_MOVE);
+			this.nameKey = _this.Consts.localization.configKeys.ACTION_MOVE;
+			this.subActions = _graph.getEdgesFrom(currentRoom).map(function(edge) {
+				return new MoveActionRoom(edge.to);
+			});
+		};
+		var ExamineActionObject = function(obj) {
+			AbstractAction.call(this,obj.id);
+			this.nameKey = obj.name;
+			this.performKey = _this.Consts.localization.configKeys.ACTION_EXAMINE_PERFORM;
+			this.isFinalAction = true;
+			var map = new COM.Map("");
+			map.globalNode.setAssociation(_this.Consts.execution.ACTION_EXAMINE_OBJECT,obj.id);
+			this.command = new ExamineCommand(null,map.globalNode);
+		};
+		var ExamineAction = function(currentRoom) {
+			AbstractAction.call(this,_this.Consts.execution.ACTION_EXAMINE);
+			this.nameKey = _this.Consts.localization.configKeys.ACTION_EXAMINE;
+			this.subActions = currentRoom.contents.map(function(obj) {
+				return new ExamineActionObject(obj);
+			});
+		};
+		var InteractActionObject = function(obj) {
+			AbstractAction.call(this,obj.id);
+			this.nameKey = obj.name;
+			this.performKey = _this.Consts.localization.configKeys.ACTION_INTERACT_PERFORM;
+			this.isFinalAction = true;
+			var map = new COM.Map("");
+			map.globalNode.setAssociation(_this.Consts.execution.ACTION_INTERACT_OBJECT,obj.id);
+			this.command = new InteractCommand(null,map.globalNode);
+		};
+		var InteractAction = function(currentRoom) {
+			AbstractAction.call(this,_this.Consts.execution.ACTION_INTERACT);
+			this.nameKey = _this.Consts.localization.configKeys.ACTION_INTERACT;
+			this.subActions = currentRoom.contents.filter(function(obj) {
+				return obj.interactable;
+			}).map(function(obj) {
+				return new InteractActionObject(obj);
+			});
 		};
 
 		// [VARS]
@@ -2225,6 +2377,7 @@ Object.defineProperty(this,"Engine",{
 		// Fuctions that change the state of the game.
 		var _updateLocation = function(newLocation) {
 			_state.setVariable(_this.Consts.definition.STATE_LOCATION,newLocation);
+			ActionManager.update();
 		};
 		var _teleportPlayer = function(to) {
 			if (_rooms.hasOwnProperty(to)) {
@@ -2233,11 +2386,11 @@ Object.defineProperty(this,"Engine",{
 				throw new EngineError("Unable to teleport to room '"+to+"': no such room exists.",to);
 			}
 		};
-		var _movePlayer = function(to) {
+		var _movePlayer = function(to,context) {
 			if (_rooms.hasOwnProperty(to)) {
 				var edge = _graph.getEdge(_getCurrentRoom(),_rooms[to]);
 				if (typeof edge !== "undefined") {
-					edge.traverse();
+					edge.traverse(context);
 				} else {
 					throw new EngineError("Unable to move to room '"+to+"': current location +'"+_getCurrentLocation().id+"' and destination '"+to+"' have no direct connection.",to);
 				}
@@ -2278,7 +2431,7 @@ Object.defineProperty(this,"Engine",{
 		};
 		this.logPushRawString = function(str) {
 			_htmlToNodes(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_logEle);
-			_this.logPushRawStringNoBreak(id,true);
+			_this.logPushRawStringNoBreak(str,true);
 		};
 		this.logPushRawStringNoBreak = function(str,keepLastInView) {
 			var lastElement = _logEle.children.length > 0 ? _logEle.children[_logEle.children.length - 1] : null;
@@ -2306,6 +2459,139 @@ Object.defineProperty(this,"Engine",{
 				msg += " ("+e.configStack.join()+")";
 			}
 			_this.logPush(msg);
+		};
+
+		// [UI]
+		// User interface functions and objects.
+		// TODO: Move mipmapping stuff down here
+		var ActionDropdown = function(action,container,parent) {
+			var _this2 = this;
+			var _text = null;
+			this.parent = _this.defaultObject(parent,null);
+			this.child = null;
+			var option;
+			var _li = document.createElement("li");
+				var _select = document.createElement("select");
+					option = document.createElement("option");
+						option.value = _this.Consts.execution.ACTION_NULL;
+						option.selected = "selected";
+						option.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.ACTION_NULL);
+					_select.appendChild(option);
+					action.subActions.forEach(function(subAction) {
+						option = document.createElement("option");
+							option.value = subAction.id;
+							option.innerHTML = _this.LocalizationMap.getString(subAction.nameKey);
+						_select.appendChild(option);
+					});
+					_select.addEventListener("change",function() {
+						_this2.wipe(false);
+						var value = _select.value;
+						if (value !== _this.Consts.execution.ACTION_NULL) {
+							_text = _select.options[_select.selectedIndex].text;
+							var found = false;
+							var subAction;
+							for (var i = 0; !found && i < action.subActions.length; i++) {
+								subAction = action.subActions[i];
+								found = subAction.id === value;
+							}
+							if (found) {
+								if (subAction.isFinalAction) {
+									_this2.child = document.createElement("li");
+										var button = document.createElement("button");
+											button.type = "button";
+											button.className = "btn";
+											button.innerHTML = _this.LocalizationMap.getString(subAction.performKey);
+											button.addEventListener("click",function() {
+												var components = [_this.stripHTML(_this.LocalizationMap.getString(_getCurrentRoom().name))];
+												components = components.concat(_this2.getActionText());
+												components = components.join(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.ACTION_ARCHIVE_DELIM));
+												_this.logPushRawString("<em>"+components+"</em>");
+												ActionManager.update();
+												subAction.command.execute(true);
+											});
+										_this2.child.appendChild(button);
+									container.appendChild(_this2.child);
+								} else {
+									_this2.child = new ActionDropdown(subAction,container,_this2);
+								}
+							} else {
+								throw new EngineError("Unable to locate sub-action with I.D. '"+value+"'.",_this2);
+							}
+						} else {
+							_text = null;
+						}
+					});
+				_li.appendChild(_select);
+			container.appendChild(_li);
+
+			this.wipe = function(wipeSelf) {
+				wipeSelf = _this.defaultBool(wipeSelf,true);
+				if (this.child !== null) {
+					if (this.child instanceof ActionDropdown) {
+						this.child.wipe();
+					} else {
+						container.removeChild(this.child);
+						this.child = null;
+					}
+				}
+				if (wipeSelf) {
+					container.removeChild(_li);
+				}
+			};
+			this.getActionText = function(arr) {
+				arr = _this.defaultArray(arr,[]);
+				arr.unshift(_text);
+				if (this.parent !== null) {
+					this.parent.getActionText(arr);
+				}
+				return arr;
+			};
+		};
+		var ActionManager = new (function() {
+			var _this2 = this;
+			var _rootDropdown;
+			this.container = null;
+			this.update = function() {
+				this.container.textContent = "";
+				_rootDropdown = null;
+				_dropdownStack = [];
+				var room = _getCurrentRoom();
+				var actions = room.getActionObjects();
+				if (room.hasContinue) {
+					var cntAction = new (actions[0])(room);
+					var button = document.createElement("button");
+						button.type = "button";
+						button.className = "btn";
+						button.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.ACTION_CONTINUE);
+						button.addEventListener("click",function() {
+							_this2.update();
+							cntAction.command.execute();
+						});
+					this.container.appendChild(button);
+				} else {
+					var ol = document.createElement("ol");
+						ol.className = "actions-list";
+					this.container.appendChild(ol);
+					var rootAction = new AbstractAction(_this.Consts.execution.ACTION_ROOT);
+					rootAction.subActions = [];
+					_this.objectForEach(actions,function(key,action) {
+						rootAction.subActions.push(new action(room));
+					});
+					_rootDropdown = new ActionDropdown(rootAction,ol);
+				}
+			};
+		})();
+		var _setupActionsUI = function() {
+			_actionsEle.textContent = "";
+			var div = document.createElement("div");
+				div.className = "action-title-container";
+				div.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
+			_actionsEle.appendChild(div);
+			div = document.createElement("div");
+				div.className = "action-select-container";
+			_actionsEle.appendChild(div);
+			ActionManager.container = div;
+			ActionManager.update();
 		};
 
 		// [LOAD ASSISTORS]
@@ -2359,8 +2645,7 @@ Object.defineProperty(this,"Engine",{
 			}
 		};
 		var _parseLocalization = function(map) {
-			_wrapParser(function() {
-				_this.nodeEnforceNoEntries(map);
+			_wrapParser(function(change) {
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.BREAK);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.INITIAL);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.TITLE_PAGE);
@@ -2372,15 +2657,28 @@ Object.defineProperty(this,"Engine",{
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_MOVE);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_EXAMINE);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_INTERACT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_NULL);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_PERFORM);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_CONTINUE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_MOVE_PERFORM);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_EXAMINE_PERFORM);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_INTERACT_PERFORM);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_ARCHIVE_DELIM);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
 				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_IMAGE_SOURCE);
 				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_AUDIO_SOURCE);
-				map.globalNode.associations.forEach(function(key,value) {
-					_this.LocalizationMap.setString(key,value);
+				map.globalNode.children.forEach(function(file) {
+					change(file);
+					_this.nodeEnforceNoEntries(file);
+					file.associations.forEach(function(key,value) {
+						_this.LocalizationMap.setString(key,value);
+					});
+					file.children.forEach(function(child) {
+						change(child);
+						_this.LocalizationMap.setGroup(child.name.unescapedString,child);
+					});
 				});
-				map.globalNode.children.forEach(function(child) {
-					_this.LocalizationMap.setGroup(child.name.unescapedString,child);
-				});
+				change(map.globalNode);
 				_this.LocalizationMap.validateNgVars();
 				var update = {};
 				_this.LocalizationMap.forEachGroup(function(key,value,isNgKey) {
@@ -2415,22 +2713,25 @@ Object.defineProperty(this,"Engine",{
 		};
 		var _parseImages = function(map) {
 			_wrapParser(function(change) {
-				_this.nodeEnforceNoEntries(map.globalNode);
-				_this.nodeEnforceNoAssociations(map.globalNode);
-				_this.nodeEnforceNoEngineChildren(map.globalNode);
 				var id;
 				_images = {};
-				map.globalNode.children.forEach(function(child) {
-					change(child);
-					_this.nodeEnforceNoEntries(child);
-					_this.nodeEnforceNoChildren(child);
-					_this.nodeEnforceHasAssociation(child,_this.Consts.definition.IMAGE_ID);
-					id = child.getAssociation(_this.Consts.definition.IMAGE_ID).unescapedString;
-					if (_images.hasOwnProperty(id)) {
-						throw new EngineError("An image with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
-					} else {
-						_images[id] = Object.freeze(new ImageReference(id,child));
-					}
+				map.globalNode.children.forEach(function(file) {
+					change(file);
+					_this.nodeEnforceNoEntries(file);
+					_this.nodeEnforceNoAssociations(file);
+					_this.nodeEnforceNoEngineChildren(file);
+					file.children.forEach(function(child) {
+						change(child);
+						_this.nodeEnforceNoEntries(child);
+						_this.nodeEnforceNoChildren(child);
+						_this.nodeEnforceHasAssociation(child,_this.Consts.definition.IMAGE_ID);
+						id = child.getAssociation(_this.Consts.definition.IMAGE_ID).unescapedString;
+						if (_images.hasOwnProperty(id)) {
+							throw new EngineError("An image with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
+						} else {
+							_images[id] = Object.freeze(new ImageReference(id,child));
+						}
+					});
 				});
 			},map.globalNode);
 		};
@@ -2438,17 +2739,20 @@ Object.defineProperty(this,"Engine",{
 			_wrapParser(function(change) {
 				var id;
 				_objects = {};
-				_this.nodeEnforceNoEntries(map.globalNode);
-				_this.nodeEnforceNoAssociations(map.globalNode);
-				_this.nodeEnforceNoEngineChildren(map.globalNode);
-				map.globalNode.children.forEach(function(child) {
-					change(child);
-					id = child.name.unescapedString;
-					if (_objects.hasOwnProperty(id)) {
-						throw new EngineError("An object with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
-					} else {
-						_objects[id] = Object.freeze(new ObjectReference(id,child));
-					}
+				map.globalNode.children.forEach(function(file) {
+					change(file);
+					_this.nodeEnforceNoEntries(file);
+					_this.nodeEnforceNoAssociations(file);
+					_this.nodeEnforceNoEngineChildren(file);
+					file.children.forEach(function(child) {
+						change(child);
+						id = child.name.unescapedString;
+						if (_objects.hasOwnProperty(id)) {
+							throw new EngineError("An object with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
+						} else {
+							_objects[id] = Object.freeze(new ObjectReference(id,child));
+						}
+					});
 				});
 			},map.globalNode);
 		};
@@ -2456,17 +2760,20 @@ Object.defineProperty(this,"Engine",{
 			_wrapParser(function(change) {
 				var id;
 				_rooms = {};
-				_this.nodeEnforceNoEntries(map.globalNode);
-				_this.nodeEnforceNoAssociations(map.globalNode);
-				_this.nodeEnforceNoEngineChildren(map.globalNode);
-				map.globalNode.children.forEach(function(child) {
-					change(child);
-					id = child.name.unescapedString;
-					if (_rooms.hasOwnProperty(id)) {
-						throw new EngineError("A room with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
-					} else {
-						_rooms[id] = Object.freeze(new Room(id,child));
-					}
+				map.globalNode.children.forEach(function(file) {
+					change(file);
+					_this.nodeEnforceNoEntries(file);
+					_this.nodeEnforceNoAssociations(file);
+					_this.nodeEnforceNoEngineChildren(file);
+					file.children.forEach(function(child) {
+						change(child);
+						id = child.name.unescapedString;
+						if (_rooms.hasOwnProperty(id)) {
+							throw new EngineError("A room with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
+						} else {
+							_rooms[id] = Object.freeze(new Room(id,child));
+						}
+					});
 				});
 			},map.globalNode);
 		};
@@ -2477,21 +2784,24 @@ Object.defineProperty(this,"Engine",{
 				_wrapParser(function(change) {
 					var name;
 					_graph = new Graph();
-					_this.nodeEnforceNoEntries(map.globalNode);
-					_this.nodeEnforceNoAssociations(map.globalNode);
-					_this.nodeEnforceOnlyTheseChildren(map.globalNode,[_this.Consts.definition.GRAPH_EDGE]);
-					map.globalNode.children.forEach(function(child) {
-						change(child);
-						_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_ORIGIN);
-						_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_DESTINATION);
-						from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
-						to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
-						name = child.name.unescapedString;
-						if (name === _this.Consts.definition.GRAPH_EDGE) {
-							_graph.push(new GraphEdge(from,to,child));
-						} else {
-							throw new EngineError("Unexpected child \""+name+"\" in graph definition.",child,_getConfigStack(child));
-						}
+					map.globalNode.children.forEach(function(file) {
+						change(file);
+						_this.nodeEnforceNoEntries(file);
+						_this.nodeEnforceNoAssociations(file);
+						_this.nodeEnforceOnlyTheseChildren(file,[_this.Consts.definition.GRAPH_EDGE]);
+						file.children.forEach(function(child) {
+							change(child);
+							_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_ORIGIN);
+							_this.nodeEnforceHasAssociation(child,_this.Consts.definition.GRAPH_DESTINATION);
+							from = child.getAssociation(_this.Consts.definition.GRAPH_ORIGIN);
+							to = child.getAssociation(_this.Consts.definition.GRAPH_DESTINATION);
+							name = child.name.unescapedString;
+							if (name === _this.Consts.definition.GRAPH_EDGE) {
+								_graph.push(new GraphEdge(from,to,child));
+							} else {
+								throw new EngineError("Unexpected child \""+name+"\" in graph definition.",child,_getConfigStack(child));
+							}
+						});
 					});
 				},map.globalNode);
 			} catch (e) {
@@ -2505,21 +2815,43 @@ Object.defineProperty(this,"Engine",{
 			_wrapParser(function(change) {
 				var id;
 				_actions = {};
-				_actions[_this.Consts.execution.ACTION_MOVE] = null;
-				_actions[_this.Consts.execution.ACTION_EXAMINE] = null;
-				_actions[_this.Consts.execution.ACTION_INTERACT] = null;
-				_this.nodeEnforceNoEntries(map.globalNode);
-				_this.nodeEnforceNoAssociations(map.globalNode);
-				_this.nodeEnforceNoEngineChildren(map.globalNode);
-				map.globalNode.children.forEach(function(child) {
-					change(child);
-					id = child.name.unescapedString;
-					if (_actions.hasOwnProperty(id)) {
-						throw new EngineError("An action with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
-					} else {
-						_actions[id] = Object.freeze(new Action(id,child));
+				_actions[_this.Consts.execution.ACTION_MOVE] = MoveAction;
+				_actions[_this.Consts.execution.ACTION_EXAMINE] = ExamineAction;
+				_actions[_this.Consts.execution.ACTION_INTERACT] = InteractAction;
+				map.globalNode.children.forEach(function(file) {
+					change(file);
+					_this.nodeEnforceNoEntries(file);
+					_this.nodeEnforceNoAssociations(file);
+					_this.nodeEnforceNoEngineChildren(file);
+					file.children.forEach(function(child) {
+						change(child);
+						id = child.name.unescapedString;
+						if (_actions.hasOwnProperty(id)) {
+							throw new EngineError("An action with I.D. \""+id+"\" already exists.",child,_getConfigStack(child));
+						} else {
+							_actions[id] = Action.makeCtor(id,child);
+						}
+					});
+				});
+			},map.globalNode);
+		};
+
+		var _validateContinues = function(map) {
+			_wrapParser(function(change) {
+				var action;
+				_this.objectForEach(_rooms,function(room) {
+					change(room.wrappedNode);
+					if (room.hasContinue) {
+						if (room.actions.length !== 1) {
+							throw new EngineError("Rooms must have one and only one action if "+_this.Consts.definition.ROOM_CONTINUE_ACTION+" is set.",room.wrappedNode,_getConfigStack(room.wrappedNode));
+						} else {
+							action = new (room.getActionObjects()[0])(room);
+							if (!action.isFinalAction) {
+								throw new EngineError("Action '"+action.id+"' is not valid to be an "+_this.Consts.definition.ROOM_CONTINUE_ACTION+" target because it does not define "+_this.Consts.definition.ACTION_DO+".",room.wrappedNode,_getConfigStack(room.wrappedNode));
+							}
+						}
 					}
-				});				
+				});
 			},map.globalNode);
 		};
 
@@ -2527,9 +2859,14 @@ Object.defineProperty(this,"Engine",{
 		// Program entry point.
 		window.addEventListener("DOMContentLoaded",function() {
 			// TODO: One error exits entire load segment, rectify this and allow load function to throw many errors
-			// 	(<ul> element with id errorLog)
+			// 	(<ol> element with id errorLog)
 			_container = document.getElementById("container");
 			_containerContent = _container.innerHTML;
+
+				// TODO: Special action for "continue"
+				// i.e. @continue = someFinalAction
+				// need to verify that someFinalAction is actually a final action (i.e. has @do and not @subActions)
+				// (on load enumerate over all rooms and check then)
 
 			var _stylesheets;
 			var _localizationMap;
@@ -2558,7 +2895,19 @@ Object.defineProperty(this,"Engine",{
 				good &= _wrapLoad(_parseGraph,_graphMap,manager);
 				good &= _wrapLoad(_parseActions,_actionsMap,manager);
 
+				good &= _wrapLoad(_validateContinues,_roomsMap,manager);
+
 				if (good) {
+					// Freeing memory
+					_stylesheets = null;
+					_localizationMap = null;
+					_stateMap = null;
+					_imagesMap = null;
+					_objectsMap = null;
+					_roomsMap = null;
+					_graphMap = null;
+					_actionsMap = null;
+
 					_container.innerHTML = _containerContent;
 					_logEle = document.getElementById(_this.Consts.html.page.LOG);
 					_imageEle = document.getElementById(_this.Consts.html.page.IMAGE);
@@ -2570,8 +2919,8 @@ Object.defineProperty(this,"Engine",{
 					_logEle.textContent = "";
 					_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
 					_invEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
-					_actionsEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
 					_questsEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+					_setupActionsUI();
 					_getCurrentRoom().getImage().display();
 				}
 			};
@@ -2603,7 +2952,6 @@ Object.defineProperty(this,"Engine",{
 			});
 			var req3 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.COMMON_STATE);
 			_wrapCallback(req3,manager,function(res) {
-				console.log(res.text);
 				_stateMap = new COM.Map(res.text);
 			});
 			var req4 = new AJAXRequest(HTTPMethods.POST,_this.Consts.io.files.SCRIPT_LOAD_IMAGES);
