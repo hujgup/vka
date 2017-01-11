@@ -1,13 +1,5 @@
-Command structure is a set of select boxes or text input fields
-So "move to room x" would be like
-Menu 1 -> Select "Move"
-Menu 2 appears
-Menu 2 -> Select "RESIDENTIAL CORRIDOR ALPHA"
-Confirm button appears
-Click confirm button
-On move action happens
-
-Setup actions so that game is playable
+Fix bug where @actionsRemove isn't working properly
+Fix bug where image doesn't disappear properly
 
 Add support for rooms that play audio.
 

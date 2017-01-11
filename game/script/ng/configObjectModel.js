@@ -1206,7 +1206,7 @@ var COM = new (function() {
 		_defineMethod("hasAssociation",function(key,value) {
 			var res = _associations.hasOwnProperty(key);
 			if (res && typeof value !== "undefined") {
-				res = _associations[key].rawString === value;
+				res = _associations[key].unescapedString === value;
 			}
 			return res;
 		});
@@ -1248,7 +1248,7 @@ var COM = new (function() {
 			deep = _applyDefault(deep,false);
 			var res = false;
 			for (var i = 0; i < _children.length; i++) {
-				res = _children[i].name.rawString === name;
+				res = _children[i].name.unescapedString === name;
 				if (res) {
 					break;
 				} else if (deep) {
@@ -1262,7 +1262,7 @@ var COM = new (function() {
 		});
 		_defineMethod("getChildrenNamed",function(name,deep,pureArray) {
 			return _childGroupGet(deep,pureArray,function(child) {
-				return child.name.rawString === name;
+				return child.name.unescapedString === name;
 			});
 		});
 		_defineMethod("getChildNamed",function(name,deep,position) {
@@ -1485,7 +1485,7 @@ var COM = new (function() {
 		});
 		_defineMethod("allNodesNamed",function(name,pureArray) {
 			var res = [];
-			if (_globalNode.name.rawString === name) {
+			if (_globalNode.name.unescapedString === name) {
 				res.push(_globalNode);
 			}
 			res = res.concat(_globalNode.getChildrenNamed(name,true,true));

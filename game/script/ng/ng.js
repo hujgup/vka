@@ -58,7 +58,7 @@ var setupEngineError = function(globalThis) {
 		}
 		this.configStack = Array.isArray(configStack) ? configStack : [];
 	};
-	EngineError.prototype = Error.prototype;
+	EngineError.prototype = Object.create(Error.prototype);
 	EngineError.prototype.constructor = EngineError;
 	Object.defineProperty(globalThis,"EngineError",{
 		value: Object.freeze(EngineError),
@@ -1109,8 +1109,8 @@ Object.defineProperty(this,"Engine",{
 				try {
 					callback();
 				} catch (e) {
-					if (typeof node !== "undefined") {
-						if (e instanceof EngineError && (typeof e.configStack === "undefined" || e.configStack.length === 0)) {
+					if (!(e instanceof EngineError) && typeof node !== "undefined") {
+						if (typeof e.configStack === "undefined" || e.configStack.length === 0) {
 							e.configStack = _getConfigStack(node);
 						} else {
 							e = new EngineError(e.message,this,_getConfigStack(node));
@@ -1147,7 +1147,7 @@ Object.defineProperty(this,"Engine",{
 				_this.nodeEnforceHasAssociation(node,assoc);
 			};
 			this.enforceHasChild = function(node,child) {
-				_this.nodeEnforceHasChild(nodechild);
+				_this.nodeEnforceHasChild(node,child);
 			};
 			this.enforceOnlyTheseAssociations = function(node,whitelist) {
 				_this.nodeEnforceOnlyTheseAssociations(node,whitelist);
@@ -1178,9 +1178,11 @@ Object.defineProperty(this,"Engine",{
 				} else {
 					context = _this.defaultObject(context,creator);
 				}
+				var res;
 				this.ngCatch(function() {
-					_this2.internalExecute(context);
+					res = _this2.internalExecute.call(_this2,context);
 				});
+				return res;
 			};
 			this.attemptMath = function(child,name) {
 				var res;
@@ -1242,6 +1244,7 @@ Object.defineProperty(this,"Engine",{
 					var cmd;
 					node.children.forEach(function(child) {
 						var name = child.name.unescapedString;
+						console.log(name,_this.Consts.execution.STATE_SET_VAR_BY_LITERAL,name === _this.Consts.execution.STATE_SET_VAR_BY_LITERAL);
 						switch (name) {
 							case _this.Consts.execution.FLOW_IF:
 								cmd = new IfCommand(_this2,child);
@@ -1263,6 +1266,12 @@ Object.defineProperty(this,"Engine",{
 								break;
 							case _this.Consts.execution.ACTION_INTERACT:
 								cmd = new InteractCommand(_this2,child);
+								break;
+							case _this.Consts.execution.STATE_SET_VAR_BY_VAR:
+								cmd = new SetVarByVarCommand(_this2,child);
+								break;
+							case _this.Consts.execution.STATE_SET_VAR_BY_LITERAL:
+								cmd = new SetVarByLiteralCommand(_this2,child);
 								break;
 							default:
 								cmd = _this2.attemptMath(child,name); 
@@ -1295,14 +1304,22 @@ Object.defineProperty(this,"Engine",{
 		// [COMMANDS - SCOPING]
 		// Controls moving the scoping stack into a child scope.
 		var ScopingCommand = function(parent,node) {
-			parent.prototype.constructor.call(this,parent,node);
+			var firstNonScopingParent = parent;
+			// Preventing infinite recursion in cases where parent is also a ScopingCommand
+			while (firstNonScopingParent instanceof ScopingCommand) {
+				firstNonScopingParent = firstNonScopingParent.parent;
+			}
+			console.log("scope -> this node",node.name.unescapedString);
+			console.log("scope -> immediate parent",parent.nodeName);
+			console.log("scope -> first non-scoping parent",firstNonScopingParent.nodeName,firstNonScopingParent);
+			firstNonScopingParent.constructor.call(this,parent,node);
 			var _this2 = this;
-			var _parentExec = this.internalExecute;
+			var _stdExec = this.internalExecute;
 			this.internalExecute = function(context) {
 				var child = context.stack.peek().getChildNamed(_this2.nodeName);
 				if (typeof child !== "undefined") {
 					context.stack.push(child);
-					var res = _parentExec(context);
+					var res = _stdExec.call(_this2,context);
 					context.stack.pop();
 					return res;
 				} else {
@@ -1310,7 +1327,7 @@ Object.defineProperty(this,"Engine",{
 				}
 			};
 		};
-		ScopingCommand.prototype = EngineCommand;
+		ScopingCommand.prototype = Object.create(EngineCommand.prototype);
 		ScopingCommand.prototype.constructor = ScopingCommand;
 		// [COMMANDS - SET VAR]
 		// Controls updating the value of a state variable.
@@ -1318,9 +1335,11 @@ Object.defineProperty(this,"Engine",{
 			EngineCommand.call(this,parent);
 			var _this2 = this;
 			var _assocs = [];
+			this.set = function(entry,context) {
+			};
 			this.internalExecute = function(context) {
 				_assocs.forEach(function(entry) {
-					context.setVariable(entry.key,entry.value);
+					_this2.set(entry,context);
 				});
 			};
 			this.ngCatch(function() {
@@ -1335,8 +1354,24 @@ Object.defineProperty(this,"Engine",{
 				});
 			});
 		};
-		SetVarCommand.prototype = EngineCommand.prototype;
+		SetVarCommand.prototype = Object.create(EngineCommand.prototype);
 		SetVarCommand.prototype.constructor = SetVarCommand;
+		var SetVarByVarCommand = function(parent,node) {
+			SetVarCommand.call(this,parent,node);
+			this.set = function(entry,context) {
+				context.stack.peek().setVariable(entry.key,context.getVariable(entry.value));
+			};
+		};
+		SetVarByVarCommand.prototype = Object.create(SetVarCommand.prototype);
+		SetVarByVarCommand.prototype.constructor = SetVarByVarCommand;
+		var SetVarByLiteralCommand = function(parent,node) {
+			SetVarCommand.call(this,parent,node);
+			this.set = function(entry,context) {
+				context.stack.peek().setVariable(entry.key,entry.value);
+			};
+		};
+		SetVarByLiteralCommand.prototype = Object.create(SetVarCommand.prototype);
+		SetVarByLiteralCommand.prototype.constructor = SetVarByLiteralCommand;
 		// [COMMANDS - ACTIONS]
 		// Commands that involve player-doable actions.
 		var TeleportCommand = function(parent,node) {
@@ -1359,7 +1394,7 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 		};
-		TeleportCommand.prototype = EngineCommand.prototype;
+		TeleportCommand.prototype = Object.create(EngineCommand.prototype);
 		TeleportCommand.prototype.constructor = TeleportCommand;
 		var MoveCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
@@ -1381,6 +1416,8 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 		};
+		MoveCommand.prototype = Object.create(EngineCommand.prototype);
+		MoveCommand.prototype.constructor = MoveCommand;
 		var ExamineCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
 			var _this2 = this;
@@ -1402,7 +1439,7 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 		};
-		ExamineCommand.prototype = EngineCommand.prototype;
+		ExamineCommand.prototype = Object.create(EngineCommand.prototype);
 		ExamineCommand.prototype.constructor = ExamineCommand;
 		var InteractCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
@@ -1424,7 +1461,7 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 		};
-		InteractCommand.prototype = EngineCommand.prototype;
+		InteractCommand.prototype = Object.create(EngineCommand.prototype);
 		InteractCommand.prototype.constructor = InteractCommand;
 		// [COMMANDS - LOG]
 		var LogCommand = function(parent,node) {
@@ -1454,7 +1491,7 @@ Object.defineProperty(this,"Engine",{
 				});
 			});
 		};
-		LogCommand.prototype = EngineCommand.prototype;
+		LogCommand.prototype = Object.create(EngineCommand.prototype);
 		LogCommand.prototype.constructor = LogCommand;
 		// [COMMANDS - IF]
 		// Controls conditional branching.
@@ -1483,7 +1520,7 @@ Object.defineProperty(this,"Engine",{
 				_else = new EngineCommand(_this2,node.getChildNamed(_this.Consts.execution.FLOW_ELSE));
 			});
 		};
-		IfCommand.prototype = EngineCommand.prototype;
+		IfCommand.prototype = Object.create(EngineCommand.prototype);
 		IfCommand.prototype.constructor = IfCommand;
 		// [COMMANDS - MATH BASE]
 		// Controls how mathematical operations work.
@@ -1536,7 +1573,7 @@ Object.defineProperty(this,"Engine",{
 				_out = node.getAssociation(_this.Consts.execution.OP_OUTPUT).unescapedString;
 			});
 		};
-		MathCommand.prototype = EngineCommand.prototype;
+		MathCommand.prototype = Object.create(EngineCommand.prototype);
 		MathCommand.prototype.constructor = MathCommand;
 		// [COMMANDS - MATH BASIC OPS]
 		// Controls basic arithmetic operations.
@@ -1546,7 +1583,7 @@ Object.defineProperty(this,"Engine",{
 				return current + value;
 			};
 		};
-		MathAddCommand.prototype = MathCommand.prototype;
+		MathAddCommand.prototype = Object.create(MathCommand.prototype);
 		MathAddCommand.prototype.constructor = MathAddCommand;
 		var MathSubtractCommand = function(parent,node) {
 			MathCommand.call(this,parent,node);
@@ -1554,7 +1591,7 @@ Object.defineProperty(this,"Engine",{
 				return current - value;
 			};
 		};
-		MathSubtractCommand.prototype = MathCommand.prototype;
+		MathSubtractCommand.prototype = Object.create(MathCommand.prototype);
 		MathSubtractCommand.prototype.constructor = MathSubtractCommand;
 		var MathMultiplyCommand = function(parent,node) {
 			MathCommand.call(this,parent,node);
@@ -1562,7 +1599,7 @@ Object.defineProperty(this,"Engine",{
 				return current*value;
 			};
 		};
-		MathMultiplyCommand.prototype = MathCommand.prototype;
+		MathMultiplyCommand.prototype = Object.create(MathCommand.prototype);
 		MathMultiplyCommand.prototype.constructor = MathMultiplyCommand;
 		var MathDivideCommand = function(parent,node) {
 			MathCommand.call(this,parent,node);
@@ -1570,7 +1607,7 @@ Object.defineProperty(this,"Engine",{
 				return current/value;
 			};
 		};
-		MathDivideCommand.prototype = MathCommand.prototype;
+		MathDivideCommand.prototype = Object.create(MathCommand.prototype);
 		MathDivideCommand.prototype.constructor = MathDivideCommand;
 		var MathModCommand = function(parent,node) {
 			MathCommand.call(this,parent,node);
@@ -1578,7 +1615,7 @@ Object.defineProperty(this,"Engine",{
 				return current%value;
 			};
 		};
-		MathModCommand.prototype = MathCommand.prototype;
+		MathModCommand.prototype = Object.create(MathCommand.prototype);
 		MathModCommand.prototype.constructor = MathModCommand;
 		var MathExpCommand = function(parent,node) {
 			MathCommand.call(this,parent,node);
@@ -1586,7 +1623,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.pow(current,value);
 			};
 		};
-		MathExpCommand.prototype = MathCommand.prototype;
+		MathExpCommand.prototype = Object.create(MathCommand.prototype);
 		MathExpCommand.prototype.constructor = MathExpCommand;
 		// [COMMANDS - MATH FUNCTIONS BASE]
 		// Base object for single-input math functions.
@@ -1596,7 +1633,7 @@ Object.defineProperty(this,"Engine",{
 				return this.initializeValue(value);
 			};
 		};
-		MathSingleCommand.prototype = MathCommand.prototype;
+		MathSingleCommand.prototype = Object.create(MathCommand.prototype);
 		MathSingleCommand.prototype.constructor = MathSingleCommand;
 		// [COMMANDS - MATH FUNCTIONS]
 		// Controls functional/complex arithmetic operations.
@@ -1606,7 +1643,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.log(value);
 			};
 		};
-		MathLnCommand.prototype = MathSingleCommand.prototype;
+		MathLnCommand.prototype = Object.create(MathSingleCommand.prototype);
 		MathLnCommand.prototype.constructor = MathLnCommand;
 		var MathLog2Command = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1614,7 +1651,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.log2(value);
 			};
 		};
-		MathLog2Command.prototype = MathSingleCommand.prototype;
+		MathLog2Command.prototype = Object.create(MathSingleCommand.prototype);
 		MathLog2Command.prototype.constructor = MathLog2Command;
 		var MathLog10Command = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1622,7 +1659,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.log10(value);
 			};
 		};
-		MathLog10Command.prototype = MathSingleCommand.prototype;
+		MathLog10Command.prototype = Object.create(MathSingleCommand.prototype);
 		MathLog10Command.prototype.constructor = MathLog10Command;
 		var MathRoundCommand = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1630,7 +1667,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.round(value);
 			};
 		};
-		MathRoundCommand.prototype = MathSingleCommand.prototype;
+		MathRoundCommand.prototype = Object.create(MathSingleCommand.prototype);
 		MathRoundCommand.prototype.constructor = MathRoundCommand;
 		var MathFloorCommand = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1638,7 +1675,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.floor(value);
 			};
 		};
-		MathFloorCommand.prototype = MathSingleCommand.prototype;
+		MathFloorCommand.prototype = Object.create(MathSingleCommand.prototype);
 		MathFloorCommand.prototype.constructor = MathFloorCommand;
 		var MathCeilingCommand = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1646,7 +1683,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.ceil(value);
 			};
 		};
-		MathCeilingCommand.prototype = MathSingleCommand.prototype;
+		MathCeilingCommand.prototype = Object.create(MathSingleCommand.prototype);
 		MathCeilingCommand.prototype.constructor = MathCeilingCommand;
 		var MathTruncateCommand = function(parent,node) {
 			MathSingleCommand.call(this,parent,node);
@@ -1654,7 +1691,7 @@ Object.defineProperty(this,"Engine",{
 				return Math.trunc(value);
 			};
 		};
-		MathTruncateCommand.prototype = MathSingleCommand.prototype;
+		MathTruncateCommand.prototype = Object.create(MathSingleCommand.prototype);
 		MathTruncateCommand.prototype.constructor = MathTruncateCommand;
 		// [COMMANDS - COMPARISON BASE]
 		// Controls the comparing of values.
@@ -1707,7 +1744,7 @@ Object.defineProperty(this,"Engine",{
 				});
 			});
 		};
-		ComparisonCommand.prototype = EngineCommand.prototype;
+		ComparisonCommand.prototype = Object.create(EngineCommand.prototype);
 		ComparisonCommand.prototype.constructor = ComparisonCommand;
 		// [COMMANDS - GETTERS]
 		// Controls getting the values in variables or literals.
@@ -1715,7 +1752,8 @@ Object.defineProperty(this,"Engine",{
 			EngineCommand.call(this,parent);
 			var _this2 = this;
 			var _vars = [];
-			this.internalExecute = function(cmp,value) {
+//			this.internalExecute = function(cmp,value) {
+			this.internalExecute = function(context) {
 				var res = [];
 				for (var i = 0; i < _vars.length; i++) {
 					res.push(context.stack.peek().getVariable(_vars[i]));
@@ -1731,7 +1769,7 @@ Object.defineProperty(this,"Engine",{
 				});
 			});
 		};
-		ComparisonVarsCommand.prototype = EngineCommand.prototype;
+		ComparisonVarsCommand.prototype = Object.create(EngineCommand.prototype);
 		ComparisonVarsCommand.prototype.constructor = ComparisonVarsCommand;
 		var ComparisonLiteralsCommand = function(parent,node) {
 			EngineCommand.call(this,parent);
@@ -1749,7 +1787,7 @@ Object.defineProperty(this,"Engine",{
 				});
 			});
 		};
-		ComparisonLiteralsCommand.prototype = EngineCommand.prototype;
+		ComparisonLiteralsCommand.prototype = Object.create(EngineCommand.prototype);
 		ComparisonLiteralsCommand.prototype.constructor = ComparisonLiteralsCommand;
 		// [COMMANDS - COMPARISON FUNCTIONS]
 		// Controls basic value comparison.
@@ -1759,7 +1797,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp === value;
 			};
 		};
-		EqualsCommand.prototype = ComparisonCommand.prototype;
+		EqualsCommand.prototype = Object.create(ComparisonCommand.prototype);
 		EqualsCommand.prototype.constructor = EqualsCommand;
 		var NotEqualsCommand = function(parent,node) {
 			ComparisonCommand.call(this,parent,node);
@@ -1767,7 +1805,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp !== value;
 			};
 		};
-		NotEqualsCommand.prototype = ComparisonCommand.prototype;
+		NotEqualsCommand.prototype = Object.create(ComparisonCommand.prototype);
 		NotEqualsCommand.prototype.constructor = NotEqualsCommand;
 		var LessThanCommand = function(parent,node) {
 			ComparisonCommand.call(this,parent,node);
@@ -1775,7 +1813,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp < value;
 			};
 		};
-		LessThanCommand.prototype = ComparisonCommand.prototype;
+		LessThanCommand.prototype = Object.create(ComparisonCommand.prototype);
 		LessThanCommand.prototype.constructor = LessThanCommand;
 		var GreaterThanCommand = function(parent,node) {
 			ComparisonCommand.call(this,parent,node);
@@ -1783,7 +1821,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp > value;
 			};
 		};
-		GreaterThanCommand.prototype = ComparisonCommand.prototype;
+		GreaterThanCommand.prototype = Object.create(ComparisonCommand.prototype);
 		GreaterThanCommand.prototype.constructor = GreaterThanCommand;
 		var LessThanOrEqualToCommand = function(parent,node) {
 			ComparisonCommand.call(this,parent,node);
@@ -1791,7 +1829,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp <= value;
 			};
 		};
-		LessThanOrEqualToCommand.prototype = ComparisonCommand.prototype;
+		LessThanOrEqualToCommand.prototype = Object.create(ComparisonCommand.prototype);
 		LessThanOrEqualToCommand.prototype.constructor = LessThanOrEqualToCommand;
 		var GreaterThanOrEqualToCommand = function(parent,node) {
 			ComparisonCommand.call(this,parent,node);
@@ -1799,7 +1837,7 @@ Object.defineProperty(this,"Engine",{
 				return cmp >= value;
 			};
 		};
-		GreaterThanOrEqualToCommand.prototype = ComparisonCommand.prototype;
+		GreaterThanOrEqualToCommand.prototype = Object.create(ComparisonCommand.prototype);
 		GreaterThanOrEqualToCommand.prototype.constructor = GreaterThanOrEqualToCommand;
 		// [COMMANDS - LIMITS]
 		// Base class for objects that may return true or false.
@@ -1882,18 +1920,19 @@ Object.defineProperty(this,"Engine",{
 			this.trueCount = 0;
 			this.totalCount = 0;
 		};
-		LimitCommand.prototype = EngineCommand.prototype;
+		LimitCommand.prototype = Object.create(EngineCommand.prototype);
 		LimitCommand.prototype.constructor = LimitCommand;
 		// [COMMANDS - LIMIT LOGIC]
 		// Limits that emulate basic logical operations.
 		var AndCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
 			this.internalExecute = function(context) {
+				console.log(this.nodeName);
 				var data = this.count(context);
 				return data.trueCount === data.totalCount;
 			};
 		};
-		AndCommand.prototype = LimitCommand.prototype;
+		AndCommand.prototype = Object.create(LimitCommand.prototype);
 		AndCommand.prototype.constructor = AndCommand;
 		var OrCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1901,7 +1940,7 @@ Object.defineProperty(this,"Engine",{
 				return this.count(context).trueCount > 0;
 			};
 		};
-		OrCommand.prototype = LimitCommand.prototype;
+		OrCommand.prototype = Object.create(LimitCommand.prototype);
 		OrCommand.prototype.constructor = OrCommand;
 		var NandCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1910,7 +1949,7 @@ Object.defineProperty(this,"Engine",{
 				return data.trueCount !== data.totalCount;
 			};
 		};
-		NandCommand.prototype = LimitCommand.prototype;
+		NandCommand.prototype = Object.create(LimitCommand.prototype);
 		NandCommand.prototype.constructor = NandCommand;
 		var NorCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1918,7 +1957,7 @@ Object.defineProperty(this,"Engine",{
 				return this.count(context).trueCount === 0;
 			};
 		};
-		NorCommand.prototype = LimitCommand.prototype;
+		NorCommand.prototype = Object.create(LimitCommand.prototype);
 		NorCommand.prototype.constructor = NorCommand;
 		var XorCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1926,7 +1965,7 @@ Object.defineProperty(this,"Engine",{
 				return this.count(context).trueCount%2 === 1;
 			};
 		};
-		XorCommand.prototype = LimitCommand.prototype;
+		XorCommand.prototype = Object.create(LimitCommand.prototype);
 		XorCommand.prototype.constructor = XorCommand;
 		var XnorCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1934,7 +1973,7 @@ Object.defineProperty(this,"Engine",{
 				return this.count(context).trueCount%2 === 0;
 			};
 		};
-		XnorCommand.prototype = LimitCommand.prototype;
+		XnorCommand.prototype = Object.create(LimitCommand.prototype);
 		XnorCommand.prototype.constructor = XnorCommand;
 		var MutexCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
@@ -1942,7 +1981,7 @@ Object.defineProperty(this,"Engine",{
 				return this.count(context).trueCount === 1;
 			};
 		};
-		MutexCommand.prototype = LimitCommand.prototype;
+		MutexCommand.prototype = Object.create(LimitCommand.prototype);
 		MutexCommand.prototype.constructor = MutexCommand;
 
 		// [NG OBJECT REFERENCES]
@@ -2070,28 +2109,28 @@ Object.defineProperty(this,"Engine",{
 			children[_this.Consts.definition.OBJECT_EVT_INTERACT] = true;
 			_this.nodeEnforceChildrenComplex(node,children,true);
 
+			console.log(id);
 			var _this2 = this;
 			var _firstInteract = true;
-			var _hasFirstInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
-			var _hasOngoingInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT);
+			var _hasFirstInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT);
+			var _hasOngoingInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT);
 			this.id = id;
 			this.name = node.getAssociation(_this.Consts.definition.NAME).unescapedString;
 			this.desc = node.getAssociation(_this.Consts.definition.DESC).unescapedString;
 			this.removable = node.hasAssociation(_this.Consts.definition.OBJECT_REMOVABLE) ? _parseBool(node.getAssociation(_this.Consts.definition.OBJECT_REMOVABLE).unescapedString) : false;
 			this.onInteract = _hasOngoingInteract ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.OBJECT_EVT_INTERACT)) : EngineCommand.NO_OP;
 			this.onFirstInteract = _hasFirstInteract ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT)) : EngineCommand.NO_OP;
-			this.interactable = _hasFirstInteract || _hasOngoingInteract;
-			this.interact = function() {
+			this.interact = function(context) {
 				if (this.interactable) {
 					if (_firstInteract) {
 						_firstInteract = false;
 						if (_hasFirstInteract) {
-							this.onFirstInteract.execute();
+							this.onFirstInteract.execute(context);
 						} else {
-							this.onInteract.execute();
+							this.onInteract.execute(context);
 						}
 					} else {
-						this.onInteract.execute();
+						this.onInteract.execute(context);
 					}
 				} else {
 					throw new EngineError("Object '"+this.id+"' is not interactable.",this,_getConfigStack(node));
@@ -2099,9 +2138,8 @@ Object.defineProperty(this,"Engine",{
 			};
 			Object.defineProperty(this,"interactable",{
 				get: function() {
-					return _firstInteract ? _hasFirstInteract || _hasOngoingInteract : _hasOngoingInteract;
-				},
-				enumerable: true
+					return _hasOngoingInteract || (_firstInteract && _hasFirstInteract);
+				}
 			});
 			this.wrappedNode = node;
 		};
@@ -2414,10 +2452,11 @@ Object.defineProperty(this,"Engine",{
 		var _interactWithObject = function(id,context) {
 			if (_objects.hasOwnProperty(id)) {
 				var obj = _objects[id];
+				console.log(obj);
 				if (obj.interactable) {
-					obj.onInteract(context);
+					obj.interact(context);
 				} else {
-					throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior.",id);
+					throw new EngineError("Unable to interact with object '"+id+"': object does not define interaction behavior in this context.",id);
 				}
 			} else {
 				throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",id);
@@ -2505,7 +2544,7 @@ Object.defineProperty(this,"Engine",{
 												var components = [_this.stripHTML(_this.LocalizationMap.getString(_getCurrentRoom().name))];
 												components = components.concat(_this2.getActionText());
 												components = components.join(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.ACTION_ARCHIVE_DELIM));
-												_this.logPushRawString("<em>"+components+"</em>");
+												_this.logPushRawString("<p><em>"+components+"</em></p>");
 												ActionManager.update();
 												subAction.command.execute(true);
 											});
@@ -2535,7 +2574,11 @@ Object.defineProperty(this,"Engine",{
 					}
 				}
 				if (wipeSelf) {
-					container.removeChild(_li);
+					try {
+						container.removeChild(_li);
+					} catch (e) {
+						// _li was already removed
+					}
 				}
 			};
 			this.getActionText = function(arr) {
