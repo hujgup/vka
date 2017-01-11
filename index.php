@@ -19,7 +19,7 @@
 	<article class="content">
 		<header>
 			<h1>Vriska's Kinky Adventure</h1>
-			<p>v0.0.0.0 (Pre-Alpha)</p>
+			<p>v0.6.0.1 (PRE-ALPHA)</p>
 			<p><strong>By Echo</strong></p>
 			<p><a href="http://inhibitionsnullandvoid.tumblr.com">inhibitionsnullandvoid.tumblr.com</a></p>
 		</header>
@@ -30,7 +30,7 @@
 				<li>Modular/Swappable Body Parts</li>
 				<li>Hard Vore/Cannibalism</li>
 				<li>Masochism/Snuff</li>
-				<li>Rediction/Amputation</li>
+				<li>Reduction/Amputation</li>
 				<li>Transformation (Animal, Body Part, Inanimate)</li>
 				<li>Free Use</li>
 				<li>Objectification</li>
