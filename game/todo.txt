@@ -1,5 +1,15 @@
+Add "Save Game", "Load Game", and "Delete Save" buttons under "Actions"
+Pops up a menu showing saves, how much space each save is taking up, how much space
+	the slot key metadata is taking up, and the total amount of space that saves
+	can occupy (localStorage capacity)
+Use characters, not bytes (i.e. a save takes up 124 C out of 5000 C total)
+
+
+Move action perform button to new line
+
+Fix bug where action perform button is too tall
+
 Fix bug where @actionsRemove isn't working properly
-Fix bug where image doesn't disappear properly
 
 Add support for rooms that play audio.
 

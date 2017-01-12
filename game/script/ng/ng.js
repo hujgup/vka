@@ -26,6 +26,7 @@ Ctrl+F headings:
 [COMMANDS - COMPARISON FUNCTIONS]
 [COMMANDS - LIMITS]
 [COMMANDS - LIMIT LOGIC]
+[SAVE/LOAD]
 [NG OBJECT REFERENCES]
 [PLAYER ACTIONS]
 [VARS]
@@ -476,12 +477,29 @@ Object.defineProperty(this,"Engine",{
 			}
 			return whitelist.indexOf(key) !== -1;
 		};
+		this.arrayInlineMap = function(instance,mapFrom,func) {
+			instance.length = 0;
+			mapFrom.forEach(function(item,index) {
+				instance.push(func(item,index));
+			});
+		};
+		this.arrayInlineCopy = function(instance,copyFrom) {
+			this.arrayInlineMap(instance,copyFrom,function(item) {
+				return item;
+			});
+		};
 		this.objectForEach = function(obj,callback) {
 			for (var key in obj) {
 				if (obj.hasOwnProperty(key)) {
 					callback(key,obj[key],obj);
 				}
 			}
+		};
+		this.objectReduce = function(obj,func,initialValue) {
+			_this.objectForEach(obj,function(key,value) {
+				func(initialValue,key,value);
+			});
+			return initialValue;
 		};
 		this.stripHTML = function(str) {
 			var div = document.createElement("div");
@@ -659,6 +677,7 @@ Object.defineProperty(this,"Engine",{
 		// State scope object. Controls access to state variables.
 		var Scope = function(name,engineAssocWhitelist,engineChildWhitelist) {
 			var _this2 = this;
+			var _name = name;
 			var _vars = {};
 			var _children = [];
 			var _assocWhitelist = _this.defaultArray(engineAssocWhitelist);
@@ -674,9 +693,10 @@ Object.defineProperty(this,"Engine",{
 			};
 
 			Object.defineProperty(this,"name",{
-				value: name,
-				enumerable: true,
-				writable: false
+				get: function() {
+					return _name;
+				},
+				enumerable: true
 			});
 			Object.defineProperty(this,"parent",{
 				get: function() {
@@ -808,6 +828,29 @@ Object.defineProperty(this,"Engine",{
 				}
 				return res;
 			});
+			_defineMethod("forEachChild",function(callback,thisArg) {
+				_children.forEach(callback,thisArg);
+			});
+			_defineMethod("getSaveObject",function() {
+				var res = {};
+				res.vars = _vars;
+				res.children = _children.reduce(function(obj,child) {
+					obj[child.name] = child.getSaveObject();
+					return obj;
+				},{});
+				return res;
+			});
+		};
+		Scope.recursiveLoadFromSave = function(json,obj) {
+			_this.objectForEach(json.vars,function(key,value) {
+				obj._setVar(key,value);
+			});
+			obj.forEachChild(function(child) {
+				Scope.recursiveLoadFromSave(json.children[child.name],child);
+			});
+		};
+		Scope.loadFromSave = function(json) {
+			Scope.recursiveLoadFromSave(json,_state);
 		};
 
 		// [MANAGER]
@@ -1244,7 +1287,6 @@ Object.defineProperty(this,"Engine",{
 					var cmd;
 					node.children.forEach(function(child) {
 						var name = child.name.unescapedString;
-						console.log(name,_this.Consts.execution.STATE_SET_VAR_BY_LITERAL,name === _this.Consts.execution.STATE_SET_VAR_BY_LITERAL);
 						switch (name) {
 							case _this.Consts.execution.FLOW_IF:
 								cmd = new IfCommand(_this2,child);
@@ -1309,9 +1351,6 @@ Object.defineProperty(this,"Engine",{
 			while (firstNonScopingParent instanceof ScopingCommand) {
 				firstNonScopingParent = firstNonScopingParent.parent;
 			}
-			console.log("scope -> this node",node.name.unescapedString);
-			console.log("scope -> immediate parent",parent.nodeName);
-			console.log("scope -> first non-scoping parent",firstNonScopingParent.nodeName,firstNonScopingParent);
 			firstNonScopingParent.constructor.call(this,parent,node);
 			var _this2 = this;
 			var _stdExec = this.internalExecute;
@@ -1349,7 +1388,7 @@ Object.defineProperty(this,"Engine",{
 				node.associations.forEach(function(key,value) {
 					_assocs.push({
 						key: key,
-						value: value
+						value: value.unescapedString
 					});
 				});
 			});
@@ -1927,7 +1966,6 @@ Object.defineProperty(this,"Engine",{
 		var AndCommand = function(parent,node) {
 			LimitCommand.call(this,parent,node);
 			this.internalExecute = function(context) {
-				console.log(this.nodeName);
 				var data = this.count(context);
 				return data.trueCount === data.totalCount;
 			};
@@ -1983,6 +2021,95 @@ Object.defineProperty(this,"Engine",{
 		};
 		MutexCommand.prototype = Object.create(LimitCommand.prototype);
 		MutexCommand.prototype.constructor = MutexCommand;
+
+		// [SAVE/LOAD]
+		// Object that controls game saving and loading
+		this.SaveGame = Object.freeze(new (function() {
+			var _collapseObject = function(obj) {
+				return _this.objectReduce(obj,function(arr,key,value) {
+					arr.push(value.getSaveObject());
+					return arr;
+				},[]);
+			};
+			var _uncollapseObject = function(loaded,ctor) {
+				loaded.forEach(function(entry) {
+					ctor.loadFromSave(entry);
+				});
+			};
+			var _verifyNotReservedKey = function(slotKey) {
+				if (slotKey === this.SLOT_STORAGE_KEY) {
+					throw new EngineError("Save game name '"+slotKey+"' is reserved by the system.",slotKey);
+				}
+			};
+
+			this.SLOT_STORAGE_KEY = "saveSlots";
+			this.GAME_STATE_KEY = "state";
+			this.OBJECTS_KEY = "objects";
+			this.GRAPH_EDGE_KEY = "edges";
+			this.LOG_KEY = "log";
+			this.storage = localStorage;
+			this.slotKeys = this.storage.getItem(this.SLOT_STORAGE_KEY);
+			var slotsDefined = this.slotKeys !== null;
+			if (slotsDefined) {
+				this.slotKeys = JSON.parse(this.slotKeys);
+			} else {
+				this.slotKeys = [];
+				this.storage.setItem(this.SLOT_STORAGE_KEY,JSON.stringify(this.slotKeys));
+			}
+
+			this.pushSlotKey = function(slotKey) {
+				_verifyNotReservedKey(slotKey);
+				this.slotKeys.push(slotKey);
+				this.storage.setItem(this.SLOT_STORAGE_KEY,JSON.stringify(this.slotKeys));
+			};
+			this.export = function() {
+				var save = {};
+				save[this.GAME_STATE_KEY] = _state.getSaveObject();
+				var savedObjects = {};
+				_this.objectForEach(_objects,function(key,value) {
+					savedObjects[key] = value.getSaveObject();
+				});
+				save[this.OBJECTS_KEY] = savedObjects;
+				var savedEdges = {};
+				_graph.forEach(function(edge) {
+					edge = edge.getSaveObject();
+					savedEdges[edge.id] = edge;
+				});
+				save[this.GRAPH_EDGE_KEY] = savedEdges;
+				save[this.LOG_KEY] = LogHistory.getSaveObject();
+				return JSON.stringify(save);
+			};
+			this.save = function(slotKey) {
+				if (this.slotKeys.indexOf(slotKey) === -1) {
+					this.pushSlotKey(slotKey);
+				} else {
+					_verifyNotReservedKey(slotKey);
+				}
+				this.storage.setItem(slotKey,this.export());
+			};
+			this.import = function(str) {
+				var save = JSON.parse(str);
+				Scope.loadFromSave(save[this.GAME_STATE_KEY]);
+				ObjectReference.loadFromSave(save[this.OBJECTS_KEY]);
+				GraphEdge.loadFromSave(save[this.GRAPH_EDGE_KEY]);
+				LogHistory.loadFromSave(save[this.LOG_KEY]);
+				LogHistory.render();
+				_updateUI();
+			};
+			this.load = function(slotKey) {
+				_verifyNotReservedKey(slotKey);
+				var str = this.storage.getItem(slotKey);
+				if (str === null) {
+					throw new EngineError("No save game of name '"+slotKey+"' exists.",slotKey);
+				}
+				this.import(str);
+			};
+			this.delete = function(slotKey) {
+				_verifyNotReservedKey(slotKey);
+				this.storage.removeItem(slotKey);
+			};
+		})());
+
 
 		// [NG OBJECT REFERENCES]
 		// Objects that wrap data read from .cfg files.
@@ -2109,7 +2236,6 @@ Object.defineProperty(this,"Engine",{
 			children[_this.Consts.definition.OBJECT_EVT_INTERACT] = true;
 			_this.nodeEnforceChildrenComplex(node,children,true);
 
-			console.log(id);
 			var _this2 = this;
 			var _firstInteract = true;
 			var _hasFirstInteract = node.hasChildNamed(_this.Consts.definition.OBJECT_EVT_FIRST_INTERACT);
@@ -2142,6 +2268,20 @@ Object.defineProperty(this,"Engine",{
 				}
 			});
 			this.wrappedNode = node;
+			this.getSaveObject = function() {
+				var res = {};
+				res.id = this.id;
+				res.firstInteract = _firstInteract;
+				return res;
+			};
+			this.instanceLoad = function(json) {
+				_firstInteract = json.firstInteract;
+			};
+		};
+		ObjectReference.loadFromSave = function(json) {
+			_this.objectForEach(_objects,function(key,value) {
+				value.instanceLoad(json[key]);
+			});
 		};
 		var Room = function(id,node) {
 			_this.nodeEnforceNoEntries(node);
@@ -2245,6 +2385,9 @@ Object.defineProperty(this,"Engine",{
 					_arr.push(edge);
 				}
 			};
+			this.forEach = function(callback,thisArg) {
+				_arr.forEach(callback,thisArg);
+			};
 		};
 		var GraphEdge = function(from,to,node) {
 			_this.nodeEnforceNoEntries(node);
@@ -2253,12 +2396,15 @@ Object.defineProperty(this,"Engine",{
 			children[_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL] = true;
 			children[_this.Consts.definition.GRAPH_EVT_TRAVERSAL] = true;
 			_this.nodeEnforceChildrenComplex(node,children,true);
+			var _fromStr = from.unescapedString;
+			var _toStr = to.unescapedString;
+			// TODO: Enforce from and to exist
 
 			var _firstTraversal = true;
 			var _hasFirstTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL);
 			var _hasOngoingTraversal = node.hasChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL);
-			this.from = _rooms[from.unescapedString];
-			this.to = _rooms[to.unescapedString];
+			this.from = _rooms[_fromStr];
+			this.to = _rooms[_toStr];
 			this.onFirstTraversal = _hasFirstTraversal ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.GRAPH_EVT_FIRST_TRAVERSAL)) : EngineCommand.NO_OP;
 			this.onTraversal = _hasOngoingTraversal ? new EngineCommand(null,node.getChildNamed(_this.Consts.definition.GRAPH_EVT_TRAVERSAL)) : EngineCommand.NO_OP;
 			this.traverse = function(context) {
@@ -2275,6 +2421,24 @@ Object.defineProperty(this,"Engine",{
 				}
 			};
 			this.wrappedNode = node;
+			this.getSaveId = function() {
+				return _fromStr+GraphEdge.saveIdDelim+_toStr;
+			};
+			this.getSaveObject = function() {
+				var res = {};
+				res.id = this.getSaveId();
+				res.firstTraversal = _firstTraversal;
+				return res;
+			};
+			this.instanceLoad = function(json) {
+				_firstTraversal = json.firstTraversal;
+			};
+		};
+		GraphEdge.saveIdDelim = "|";
+		GraphEdge.loadFromSave = function(json) {
+			_graph.forEach(function(edge) {
+				edge.instanceLoad(json[edge.getSaveId()]);
+			});
 		};
 
 		// [PLAYER ACTIONS]
@@ -2413,9 +2577,13 @@ Object.defineProperty(this,"Engine",{
 
 		// [ACTIONS]
 		// Fuctions that change the state of the game.
+		var _updateUI = function() {
+			_getCurrentRoom().getImage().display();
+			ActionManager.update();
+		};
 		var _updateLocation = function(newLocation) {
 			_state.setVariable(_this.Consts.definition.STATE_LOCATION,newLocation);
-			ActionManager.update();
+			_updateUI();
 		};
 		var _teleportPlayer = function(to) {
 			if (_rooms.hasOwnProperty(to)) {
@@ -2452,7 +2620,6 @@ Object.defineProperty(this,"Engine",{
 		var _interactWithObject = function(id,context) {
 			if (_objects.hasOwnProperty(id)) {
 				var obj = _objects[id];
-				console.log(obj);
 				if (obj.interactable) {
 					obj.interact(context);
 				} else {
@@ -2462,17 +2629,91 @@ Object.defineProperty(this,"Engine",{
 				throw new EngineError("Unable to interact with object '"+id+"': no such object exists.",id);
 			}
 		};
-		this.logPush = function(id) {
-			_this.logPushRawString(_this.LocalizationMap.getString(id));
+
+		// [UI]
+		// User interface functions and objects.
+		var LogHistory = new (function() {
+			var _history = [];
+			this.pushLocalizationKey = function(id,hasBreak) {
+				_history.push(new LogHistoryElement(LogHistoryElement.type.LOCALIZATION_KEY,id,hasBreak));
+			};
+			this.pushHtml = function(str,hasBreak) {
+				_history.push(new LogHistoryElement(LogHistoryElement.type.HTML,str,hasBreak));
+			};
+			this.forEach = function(callback,thisArg) {
+				_history.forEach(callback,thisArg);
+			};
+			this.render = function() {
+				_logEle.textContent = "";
+				_history.forEach(function(element) {
+					element.render();
+				});
+			};
+			this.getSaveObject = function() {
+				return _history.map(function(element) {
+					return element.getSaveObject();
+				});
+			};
+			this.loadFromSave = function(json) {
+				_history = [];
+				json.forEach(function(element) {
+					_history.push(new LogHistoryElement(element.elementType,element.content,element.hasBreak));
+				},this);
+			};
+		})();
+		var LogHistoryElement = function(elementType,content,hasBreak) {
+			this.elementType = elementType;
+			this.content = content;
+			this.hasBreak = hasBreak;
+			this.render = function() {
+				if (this.elementType === LogHistoryElement.type.HTML) {
+					if (this.hasBreak) {
+						_this.logPushRawString(this.content,false);
+					} else {
+						_this.logPushRawStringNoBreak(this.content,false,false);
+					}
+				} else if (this.hasBreak) {
+					_this.logPush(this.content,false);
+				} else {
+					_this.logPushNoBreak(this.content,false,false);
+				}
+			};
+			this.getSaveObject = function() {
+				var res = {};
+				res.elementType = this.elementType;
+				res.content = this.content;
+				res.hasBreak = this.hasBreak;
+				return res;
+			};
 		};
-		this.logPushNoBreak = function(id,keepLastInView) {
-			_this.logPushRawStringNoBreak(_this.LocalizationMap.getString(id),keepLastInView);
+		LogHistoryElement.type = {
+			LOCALIZATION_KEY: 1,
+			HTML: 2
 		};
-		this.logPushRawString = function(str) {
+		this.logPush = function(id,saveToHistory) {
+			saveToHistory = _this.defaultBool(saveToHistory,true);
+			_this.logPushRawString(_this.LocalizationMap.getString(id),false);
+			if (saveToHistory) {
+				LogHistory.pushLocalizationKey(id,true);
+			}
+		};
+		this.logPushNoBreak = function(id,keepLastInView,saveToHistory) {
+			saveToHistory = _this.defaultBool(saveToHistory,true);
+			_this.logPushRawStringNoBreak(_this.LocalizationMap.getString(id),keepLastInView,false);
+			if (saveToHistory) {
+				LogHistory.pushLocalizationKey(id,false);
+			}
+		};
+		this.logPushRawString = function(str,saveToHistory) {
+			saveToHistory = _this.defaultBool(saveToHistory,true);
 			_htmlToNodes(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.BREAK),_logEle);
-			_this.logPushRawStringNoBreak(str,true);
+			_this.logPushRawStringNoBreak(str,true,false);
+			if (saveToHistory) {
+				LogHistory.pushHtml(str,true);
+			}
 		};
-		this.logPushRawStringNoBreak = function(str,keepLastInView) {
+		this.logPushRawStringNoBreak = function(str,keepLastInView,saveToHistory) {
+			saveToHistory = _this.defaultBool(saveToHistory,true);
 			var lastElement = _logEle.children.length > 0 ? _logEle.children[_logEle.children.length - 1] : null;
 			_htmlToNodes(str,_logEle);
 			if (lastElement !== null) {
@@ -2490,6 +2731,9 @@ Object.defineProperty(this,"Engine",{
 				}
 				_logEle.scrollTop = refElement.offsetTop;
 			}
+			if (saveToHistory) {
+				LogHistory.pushHtml(str,false);
+			}
 		};
 		this.logPushError = function(e) {
 			// TODO: when refactoring error handling, change this function
@@ -2497,11 +2741,8 @@ Object.defineProperty(this,"Engine",{
 			if (e.hasOwnProperty("configStack")) {
 				msg += " ("+e.configStack.join()+")";
 			}
-			_this.logPush(msg);
+			_this.logPushRawString(msg);
 		};
-
-		// [UI]
-		// User interface functions and objects.
 		// TODO: Move mipmapping stuff down here
 		var ActionDropdown = function(action,container,parent) {
 			var _this2 = this;
@@ -2940,17 +3181,17 @@ Object.defineProperty(this,"Engine",{
 
 				good &= _wrapLoad(_validateContinues,_roomsMap,manager);
 
-				if (good) {
-					// Freeing memory
-					_stylesheets = null;
-					_localizationMap = null;
-					_stateMap = null;
-					_imagesMap = null;
-					_objectsMap = null;
-					_roomsMap = null;
-					_graphMap = null;
-					_actionsMap = null;
+				// Freeing memory
+				_stylesheets = null;
+				_localizationMap = null;
+				_stateMap = null;
+				_imagesMap = null;
+				_objectsMap = null;
+				_roomsMap = null;
+				_graphMap = null;
+				_actionsMap = null;
 
+				if (good) {
 					_container.innerHTML = _containerContent;
 					_logEle = document.getElementById(_this.Consts.html.page.LOG);
 					_imageEle = document.getElementById(_this.Consts.html.page.IMAGE);
