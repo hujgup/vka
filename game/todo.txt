@@ -1,3 +1,13 @@
+Fix bug where deleting a save slot doesn't remove that key from SaveGame.slotKeys
+	and corresponding storage entry
+
+More events
+	Room onEnter, onExit
+	+ First occurance versions
+
+Overlay API
+	Structure: CreateUI, ClearUI, PopulateUI, DestroyUI
+
 Add "Save Game", "Load Game", and "Delete Save" buttons under "Actions"
 Pops up a menu showing saves, how much space each save is taking up, how much space
 	the slot key metadata is taking up, and the total amount of space that saves

@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.7.0.0 (1)
+## v0.8.0.0 (1)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,7 +10,10 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.7.0.0 (current)
+## v0.8.0.0 (current)
+* Prototype of save game GUI.
+
+## v0.7.0.0
 * Added the ability to save and load games (no GUI yet).
 * Log push methods now keep track of the log history.
 * Fixed bug with Scope variable setting from Commands where a COM.String object was being passed instead of an unescaped string.

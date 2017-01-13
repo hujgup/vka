@@ -2577,10 +2577,6 @@ Object.defineProperty(this,"Engine",{
 
 		// [ACTIONS]
 		// Fuctions that change the state of the game.
-		var _updateUI = function() {
-			_getCurrentRoom().getImage().display();
-			ActionManager.update();
-		};
 		var _updateLocation = function(newLocation) {
 			_state.setVariable(_this.Consts.definition.STATE_LOCATION,newLocation);
 			_updateUI();
@@ -2632,6 +2628,10 @@ Object.defineProperty(this,"Engine",{
 
 		// [UI]
 		// User interface functions and objects.
+		var _updateUI = function() {
+			_getCurrentRoom().getImage().display();
+			ActionManager.update();
+		};
 		var LogHistory = new (function() {
 			var _history = [];
 			this.pushLocalizationKey = function(id,hasBreak) {
@@ -2877,6 +2877,228 @@ Object.defineProperty(this,"Engine",{
 			ActionManager.container = div;
 			ActionManager.update();
 		};
+		this.SaveLoadUI = function() {
+			OverlayUI.call(this,true);
+			var _createThCol = function(parent,str) {
+				var th = document.createElement("th");
+					th.className = "save-table-th-col";
+					th.scope = "col";
+					th.textContent = str;
+				parent.appendChild(th);
+			};
+			var _createThRow = function(parent,str) {
+				var th = document.createElement("th");
+					th.className = "save-table-th-row";
+					th.scope = "row";
+					th.textContent = str;
+				parent.appendChild(th);
+			};
+			this.internalCreate = function(container) {
+/*
+TODO
+Drop the table layout and use a set of inline-block elements instead
+	(flexible column width)
+*/
+				var elements = {};
+				var table = document.createElement("table");
+					table.className = "save-table scrollable-table";
+					var thead = document.createElement("thead");
+						thead.className = "save-table-head";
+						var tr = document.createElement("tr");
+							_createThCol(tr,"Save Name");
+							_createThCol(tr,"Size");
+/*
+							_createThCol(tr,"Override");
+							_createThCol(tr,"Load");
+							_createThCol(tr,"Delete");
+*/
+						thead.appendChild(tr);
+					table.appendChild(thead);
+					elements.table = document.createElement("tbody");
+						elements.table.className = "save-table-body";
+					table.appendChild(elements.table);
+				container.appendChild(table);
+				return elements;
+			};
+			this.internalClear = function(elements) {
+				elements.table.textContent = "";
+			};
+			this.getPopulationData = function() {
+				return [
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					},
+					{
+						name: "hello world",
+						size: 104
+					},
+					{
+						name: "this is me",
+						size: 3
+					},
+					{
+						name: "life should be",
+						size: 881
+					}
+				];
+			};
+			this.internalPopulate = function(elements,data) {
+				var tr;
+				var th;
+				var td;
+				data.forEach(function(save) {
+					tr = document.createElement("tr");
+						_createThRow(tr,save.name);
+						td = document.createElement("td");
+							td.textContent = save.size+" C";
+						tr.appendChild(td);
+					elements.table.appendChild(tr);
+				});
+			};
+		};
+		this.SaveLoadUI.prototype = Object.create(OverlayUI.prototype);
+		this.SaveLoadUI.prototype.constructor = this.SaveLoadUI;
 
 		// [LOAD ASSISTORS]
 		// Functions that assist in loading.

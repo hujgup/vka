@@ -222,24 +222,9 @@ html, body {
 }
 .log-container {
 	position:relative;
-	border:2px inset #e4e4e4;
-	color:#e4e4e4;
-	background-color:#3b3d3c;
 	height:100%;
 	padding:4px;
 }
 .fit {
 	width:100%;
-}
-.image-container {
-	position:relative;
-}
-.actions-list {
-	list-style-type:none;
-	margin:0;
-	padding:0;
-}
-.actions-list > li {
-	display:inline-block;
-	padding-right:8px;
 }

@@ -1,0 +1,38 @@
+/* scrollable-table adapted from http://jsfiddle.net/5KJka/1850/ */
+.scrollable-table {
+	position:relative;
+	display:table;
+}
+.scrollable-table, .scrollable-table > thead, .scrollable-table > tbody {
+	width:100%;
+}
+.scrollable-table > thead {
+	overflow-y:scroll;
+	display:table;
+	table-layout:fixed;
+	width:calc(100% - 16px);
+}
+.scrollable-table > tbody {
+	overflow-y:scroll;
+	display:block;
+}
+.scrollable-table > thead > tr, .scrollable-table > tbody > tr {
+	width:100%;
+	text-align:left;
+	display:table;
+	table-layout:fixed;
+}
+
+
+.image-container {
+	position:relative;
+}
+.actions-list {
+	list-style-type:none;
+	margin:0;
+	padding:0;
+}
+.actions-list > li {
+	display:inline-block;
+	padding-right:8px;
+}
