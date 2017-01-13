@@ -13,6 +13,10 @@
 ## v0.8.0.0 (current)
 * Prototype of save game GUI.
 
+## v0.7.1.0
+* Updated index page with pre-release information.
+* Fixed spelling and quirk mistakes in Aradia pesterlog text.
+
 ## v0.7.0.0
 * Added the ability to save and load games (no GUI yet).
 * Log push methods now keep track of the log history.
