@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.8.0.0 (1)
+## v0.8.0.0 (2)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
