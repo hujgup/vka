@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.9.0.0 (2)
+## v0.9.1.0 (1)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,7 +10,12 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.9.0.0 (current)
+## v0.9.1.0 (current)
+* Finalized save game GUI.
+* Localized save game GUI.
+* Provided a button to access save game GUI.
+
+## v0.9.0.0
 * Spec: Added body type references for Aradia and Feferi.
 * Spec: Added lip and lipstick color data.
 * Spec: Defined term "base color".

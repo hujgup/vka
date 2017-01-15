@@ -281,8 +281,24 @@ Object.defineProperty(this,"Engine",{
 						this.ACTION_INTERACT_PERFORM = _this2.CONFIG_ENGINE_PREFIX+"actionInteractPerform";
 						this.ACTION_ARCHIVE_DELIM = _this2.CONFIG_ENGINE_PREFIX+"actionArchiveDelim";
 						this.QUEST_LOG_EMPTY = _this2.CONFIG_ENGINE_PREFIX+"questLogEmpty";
+						this.SAVE_LOAD_BUTTON = _this2.CONFIG_ENGINE_PREFIX+"saveLoadButton";
+						this.SAVE_INSUFFICIENT_STORAGE = _this2.CONFIG_ENGINE_PREFIX+"saveInsufficientStorage";
+						this.SAVE_SLOT_KEY = _this2.CONFIG_ENGINE_PREFIX+"saveSlotKey";
+						this.SAVE_SIZE = _this2.CONFIG_ENGINE_PREFIX+"saveSize";
+						this.SAVE_SIZE_UNIT = _this2.CONFIG_ENGINE_PREFIX+"saveSizeUnit";
+						this.SAVE_CREATE_PLACEHOLDER = _this2.CONFIG_ENGINE_PREFIX+"saveCreatePlaceholder";
+						this.SAVE_CREATE_NO_NAME_ENTERED = _this2.CONFIG_ENGINE_PREFIX+"saveCreateNoNameEntered";
+						this.SAVE_CREATE_DUPLICATE_NAME = _this2.CONFIG_ENGINE_PREFIX+"saveCreateDuplicateName";
+						this.SAVE_CREATE_ALT = _this2.CONFIG_ENGINE_PREFIX+"saveCreateAlt";
+						this.SAVE_LOAD_ALT = _this2.CONFIG_ENGINE_PREFIX+"saveLoadAlt";
+						this.SAVE_OVERRIDE_ALT = _this2.CONFIG_ENGINE_PREFIX+"saveOverrideAlt";
+						this.SAVE_DELETE_ALT = _this2.CONFIG_ENGINE_PREFIX+"saveDeleteAlt";
 						this.CONCAT_IMAGE_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatImageSource";
 						this.CONCAT_AUDIO_SOURCE = _this2.CONFIG_ENGINE_PREFIX+"concatAudioSource";
+						this.CONCAT_CONFIRM_CREATE_SAVE = _this2.CONFIG_ENGINE_PREFIX+"concatConfirmCreateSave";
+						this.CONCAT_CONFIRM_LOAD_SAVE = _this2.CONFIG_ENGINE_PREFIX+"concatConfirmLoadSave";
+						this.CONCAT_CONFIRM_OVERRIDE_SAVE = _this2.CONFIG_ENGINE_PREFIX+"concatConfirmOverrideSave";
+						this.CONCAT_CONFIRM_DELETE_SAVE = _this2.CONFIG_ENGINE_PREFIX+"concatConfirmDeleteSave";
 						this.CONCAT_ARG_ID = _this2.CONFIG_ENGINE_PREFIX+"argId";
 					})());
 				})());
@@ -393,6 +409,7 @@ Object.defineProperty(this,"Engine",{
 						this.GFX_USER = _this4.GFX_ROOT+_this3.USER_ID+"/";
 						this.GFX_ENGINE = _this4.GFX_ROOT+_this3.ENGINE_ID+"/";
 						this.GFX_MIPMAP = _this4.GFX_ENGINE+"mipmaps/";
+						this.GFX_ICONS = _this4.GFX_ENGINE+"icons/";
 					})());
 					this.files = Object.freeze(new (function() {
 						var _this4 = this;
@@ -401,6 +418,16 @@ Object.defineProperty(this,"Engine",{
 						this.SCRIPT_LOAD_IMAGES = _this3.paths.SCRIPT_IO+"loadImages.php";
 						this.SCRIPT_LOAD_MISC = _this3.paths.SCRIPT_IO+"loadNg.php";
 						this.COMMON_STATE = _this3.paths.COMMON_ENGINE+"state"+_this3.CONFIG_EXT;
+					})());
+				})());
+				this.gfx = Object.freeze(new (function() {
+					var _this3 = this;
+					this.icons = Object.freeze(new (function() {
+						var _this4 = this;
+						this.OPEN = _this2.io.paths.GFX_ICONS+"open.png";
+						this.SAVE = _this2.io.paths.GFX_ICONS+"save.png";
+						this.CREATE_SAVE = _this2.io.paths.GFX_ICONS+"save_create.png";
+						this.DELETE = _this2.io.paths.GFX_ICONS+"delete.png";
 					})());
 				})());
 			})()),
@@ -2025,6 +2052,8 @@ Object.defineProperty(this,"Engine",{
 		// [SAVE/LOAD]
 		// Object that controls game saving and loading
 		this.SaveGame = Object.freeze(new (function() {
+			var _this2 = this;
+
 			var _collapseObject = function(obj) {
 				return _this.objectReduce(obj,function(arr,key,value) {
 					arr.push(value.getSaveObject());
@@ -2037,31 +2066,39 @@ Object.defineProperty(this,"Engine",{
 				});
 			};
 			var _verifyNotReservedKey = function(slotKey) {
-				if (slotKey === this.SLOT_STORAGE_KEY) {
+				if (slotKey === _this2.SLOT_STORAGE_KEY) {
 					throw new EngineError("Save game name '"+slotKey+"' is reserved by the system.",slotKey);
 				}
 			};
+			var _throwKeyDoesntExist = function(slotKey) {
+				throw new EngineError("No save game of name '"+slotKey+"' exists.",slotKey);
+			};
+			var _write = function(key,value) {
+				try {
+					_this2.STORAGE.setItem(key,value);
+				} catch (e) {
+					throw new EngineError("Cannot write value because the storage environment's character limit would be exceeded.",_this2.STORAGE);
+				}
+			};
+			var _updateMetadata = function() {
+				_write(_this2.SLOT_STORAGE_KEY,JSON.stringify(_metadata));
+			};
 
-			this.SLOT_STORAGE_KEY = "saveSlots";
+			this.STORAGE = localStorage;
+			var _metadata = this.STORAGE.getItem(this.SLOT_STORAGE_KEY);
+			var slotsDefined = _metadata !== null;
+			if (slotsDefined) {
+				_metadata = JSON.parse(_metadata);
+			} else {
+				_metadata = {};
+				_updateMetadata();
+			}
+			this.METADATA_STORAGE_KEY = "saveData";
 			this.GAME_STATE_KEY = "state";
 			this.OBJECTS_KEY = "objects";
 			this.GRAPH_EDGE_KEY = "edges";
 			this.LOG_KEY = "log";
-			this.storage = localStorage;
-			this.slotKeys = this.storage.getItem(this.SLOT_STORAGE_KEY);
-			var slotsDefined = this.slotKeys !== null;
-			if (slotsDefined) {
-				this.slotKeys = JSON.parse(this.slotKeys);
-			} else {
-				this.slotKeys = [];
-				this.storage.setItem(this.SLOT_STORAGE_KEY,JSON.stringify(this.slotKeys));
-			}
-
-			this.pushSlotKey = function(slotKey) {
-				_verifyNotReservedKey(slotKey);
-				this.slotKeys.push(slotKey);
-				this.storage.setItem(this.SLOT_STORAGE_KEY,JSON.stringify(this.slotKeys));
-			};
+			this.METADATA = new ImmutableObject(_metadata);
 			this.export = function() {
 				var save = {};
 				save[this.GAME_STATE_KEY] = _state.getSaveObject();
@@ -2080,12 +2117,11 @@ Object.defineProperty(this,"Engine",{
 				return JSON.stringify(save);
 			};
 			this.save = function(slotKey) {
-				if (this.slotKeys.indexOf(slotKey) === -1) {
-					this.pushSlotKey(slotKey);
-				} else {
-					_verifyNotReservedKey(slotKey);
-				}
-				this.storage.setItem(slotKey,this.export());
+				_verifyNotReservedKey(slotKey);
+				var str = this.export();
+				_metadata[slotKey] = str.length;
+				_updateMetadata();
+				_write(slotKey,str);
 			};
 			this.import = function(str) {
 				var save = JSON.parse(str);
@@ -2098,15 +2134,21 @@ Object.defineProperty(this,"Engine",{
 			};
 			this.load = function(slotKey) {
 				_verifyNotReservedKey(slotKey);
-				var str = this.storage.getItem(slotKey);
+				var str = this.STORAGE.getItem(slotKey);
 				if (str === null) {
-					throw new EngineError("No save game of name '"+slotKey+"' exists.",slotKey);
+					_throwKeyDoesntExist(slotKey);
 				}
 				this.import(str);
 			};
 			this.delete = function(slotKey) {
 				_verifyNotReservedKey(slotKey);
-				this.storage.removeItem(slotKey);
+				if (_metadata.hasOwnProperty(slotKey)) {
+					delete _metadata[slotKey];
+					this.STORAGE.removeItem(slotKey);
+					_updateMetadata();
+				} else {
+					_throwKeyDoesntExist(slotKey);
+				}
 			};
 		})());
 
@@ -2872,19 +2914,33 @@ Object.defineProperty(this,"Engine",{
 				div.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_ACTS);
 			_actionsEle.appendChild(div);
 			div = document.createElement("div");
-				div.className = "action-select-container";
+				div.className = "action-section action-select-container";
 			_actionsEle.appendChild(div);
 			ActionManager.container = div;
 			ActionManager.update();
+			div = document.createElement("div");
+				div.className = "action-section save-load-container";
+				var button = document.createElement("button");
+					button.type = "button";
+					button.textContent = _this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_LOAD_BUTTON));
+					button.addEventListener("click",function() {
+						SaveLoadUI.create();
+					});
+				div.appendChild(button);
+			_actionsEle.appendChild(div);
 		};
-		this.SaveLoadUI = function() {
+		var SaveLoadUI = function() {
+			// TODO: Localize all of this
+			// _appendIcon confirmId args not localized pending concat localization change (one concat for each create/load/override/delete)
 			OverlayUI.call(this,true);
+			var _this2 = this;
 			var _createThCol = function(parent,str) {
 				var th = document.createElement("th");
 					th.className = "save-table-th-col";
 					th.scope = "col";
 					th.textContent = str;
 				parent.appendChild(th);
+				return th;
 			};
 			var _createThRow = function(parent,str) {
 				var th = document.createElement("th");
@@ -2892,213 +2948,143 @@ Object.defineProperty(this,"Engine",{
 					th.scope = "row";
 					th.textContent = str;
 				parent.appendChild(th);
+				return th;
+			};
+			var _iconStdOnClick = function(slotKey,confirmConcatKey,innerFunc) {
+				if (confirm(_this.stripHTML(_this.LocalizationMap.getGroup(confirmConcatKey).invoke(slotKey)))) {
+					innerFunc();
+				}
+			};
+			var _appendIcon = function(container,src,alt,confirmConcatKey,onClick,getSlotKey,imgOnLoad) {
+				imgOnLoad = _this.defaultFunction(imgOnLoad);
+				var button = document.createElement("button");
+					button.type = "button";
+					button.className = "icon-btn";
+					var img = document.createElement("img");
+						img.className = "icon";
+						img.addEventListener("load",imgOnLoad);
+						img.src = src;
+						img.alt = alt;
+						img.title = alt;
+					button.appendChild(img);
+					button.addEventListener("click",function() {
+						onClick(getSlotKey(),confirmConcatKey);
+					});
+				container.appendChild(button);
+			};
+			var _appendIconKnownKey = function(container,src,alt,slotKey,confirmConcatKey,onClick,imgOnLoad) {
+				_appendIcon(container,src,alt,confirmConcatKey,function(sk,cid) {
+					_iconStdOnClick(sk,cid,onClick);
+				},function() {
+					return slotKey;
+				},imgOnLoad);
+			};
+			var _save = function(slotKey) {
+				var populate = true;
+				try {
+					_this.SaveGame.save(slotKey);
+				} catch (e) {
+					populate = false;
+					alert(_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_INSUFFICIENT_STORAGE)));
+				}
+				if (populate) {
+					// Let the standard exception handler catch these cases
+					_this2.populate();
+				}
 			};
 			this.internalCreate = function(container) {
-/*
-TODO
-Drop the table layout and use a set of inline-block elements instead
-	(flexible column width)
-*/
 				var elements = {};
 				var table = document.createElement("table");
-					table.className = "save-table scrollable-table";
+					table.className = "save-table";
 					var thead = document.createElement("thead");
 						thead.className = "save-table-head";
 						var tr = document.createElement("tr");
-							_createThCol(tr,"Save Name");
-							_createThCol(tr,"Size");
-/*
-							_createThCol(tr,"Override");
-							_createThCol(tr,"Load");
-							_createThCol(tr,"Delete");
-*/
+							_createThCol(tr,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_SLOT_KEY)));
+							_createThCol(tr,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_SIZE)));
+							_createThCol(tr,"");
+							_createThCol(tr,"").className = "space-fill";
 						thead.appendChild(tr);
 					table.appendChild(thead);
 					elements.table = document.createElement("tbody");
 						elements.table.className = "save-table-body";
 					table.appendChild(elements.table);
 				container.appendChild(table);
+				elements.scrollableTable = new ScrollableTable(table);
+				elements.scrollableTable.onRender = function() {
+					elements.table.style.height = "0";
+					elements.table.style.height = (table.offsetHeight - thead.offsetHeight)+"px";
+				};
+				var div = document.createElement("div");
+					div.className = "new-save-container";
+					elements.newSaveInput = document.createElement("input");
+						elements.newSaveInput.type = "text";
+						elements.newSaveInput.className = "new-save-input";
+						elements.newSaveInput.placeholder = _this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_CREATE_PLACEHOLDER));
+					div.appendChild(elements.newSaveInput);
+					_appendIcon(div,_this.Consts.gfx.icons.CREATE_SAVE,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_CREATE_ALT)),_this.Consts.localization.configKeys.CONCAT_CONFIRM_CREATE_SAVE,function(slotKey,confirmConcatKey) {
+						if (slotKey.length <= 0) {
+							alert(_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_CREATE_NO_NAME_ENTERED)));
+						} else if (_this.SaveGame.METADATA.hasOwnProperty(slotKey)) {
+							alert(_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_CREATE_DUPLICATE_NAME)));
+						} else {
+							_iconStdOnClick(slotKey,confirmConcatKey,function() {
+								_save(slotKey)
+							});
+						}
+					},function() {
+						return elements.newSaveInput.value;
+					});
+				container.appendChild(div);
 				return elements;
 			};
 			this.internalClear = function(elements) {
+				elements.scrollableTable.freeze();
 				elements.table.textContent = "";
 			};
 			this.getPopulationData = function() {
-				return [
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					},
-					{
-						name: "hello world",
-						size: 104
-					},
-					{
-						name: "this is me",
-						size: 3
-					},
-					{
-						name: "life should be",
-						size: 881
-					}
-				];
+				return _this.SaveGame.METADATA;
 			};
 			this.internalPopulate = function(elements,data) {
+				var redrawTable = function() {
+					elements.scrollableTable.render();
+				};
 				var tr;
 				var th;
 				var td;
-				data.forEach(function(save) {
+				data.forEach(function(slotKey,size) {
 					tr = document.createElement("tr");
-						_createThRow(tr,save.name);
+						_createThRow(tr,slotKey).className += " save-table-cell-border";
 						td = document.createElement("td");
-							td.textContent = save.size+" C";
+							td.className = "save-table-cell-border";
+							td.textContent = (size < 1000 ? 1 : Math.round(size/1000))+_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_SIZE_UNIT);
+						tr.appendChild(td);
+						td = document.createElement("td");
+							// save point
+							_appendIconKnownKey(td,_this.Consts.gfx.icons.OPEN,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_LOAD_ALT)),slotKey,_this.Consts.localization.configKeys.CONCAT_CONFIRM_LOAD_SAVE,function() {
+								_this.SaveGame.load(slotKey);
+								_this2.dispose();
+							},redrawTable);
+							_appendIconKnownKey(td,_this.Consts.gfx.icons.SAVE,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_OVERRIDE_ALT)),slotKey,_this.Consts.localization.configKeys.CONCAT_CONFIRM_OVERRIDE_SAVE,function() {
+								_save(slotKey);
+							},redrawTable);
+							_appendIconKnownKey(td,_this.Consts.gfx.icons.DELETE,_this.stripHTML(_this.LocalizationMap.getString(_this.Consts.localization.configKeys.SAVE_DELETE_ALT)),slotKey,_this.Consts.localization.configKeys.CONCAT_CONFIRM_DELETE_SAVE,function() {
+								_this.SaveGame.delete(slotKey);
+								_this2.populate();
+							},redrawTable);
+						tr.appendChild(td);
+						td = document.createElement("td");
 						tr.appendChild(td);
 					elements.table.appendChild(tr);
 				});
+				elements.scrollableTable.thaw();
+			};
+			this.internalDispose = function(elements) {
+				elements.scrollableTable.dispose();
 			};
 		};
-		this.SaveLoadUI.prototype = Object.create(OverlayUI.prototype);
-		this.SaveLoadUI.prototype.constructor = this.SaveLoadUI;
+		SaveLoadUI.prototype = Object.create(OverlayUI.prototype);
+		SaveLoadUI.prototype.constructor = SaveLoadUI;
+		SaveLoadUI = new SaveLoadUI();
 
 		// [LOAD ASSISTORS]
 		// Functions that assist in loading.
@@ -3171,8 +3157,24 @@ Drop the table layout and use a set of inline-block elements instead
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_INTERACT_PERFORM);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.ACTION_ARCHIVE_DELIM);
 				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.QUEST_LOG_EMPTY);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_LOAD_BUTTON);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_INSUFFICIENT_STORAGE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_SLOT_KEY);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_SIZE);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_SIZE_UNIT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_CREATE_PLACEHOLDER);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_CREATE_NO_NAME_ENTERED);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_CREATE_DUPLICATE_NAME);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_CREATE_ALT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_LOAD_ALT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_OVERRIDE_ALT);
+				_this.LocalizationMap.defineNgString(_this.Consts.localization.configKeys.SAVE_DELETE_ALT);
 				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_IMAGE_SOURCE);
 				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_AUDIO_SOURCE);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_CONFIRM_CREATE_SAVE);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_CONFIRM_LOAD_SAVE);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_CONFIRM_OVERRIDE_SAVE);
+				_this.LocalizationMap.defineNgGroup(_this.Consts.localization.configKeys.CONCAT_CONFIRM_DELETE_SAVE);
 				map.globalNode.children.forEach(function(file) {
 					change(file);
 					_this.nodeEnforceNoEntries(file);

@@ -35,12 +35,9 @@
 	width:100%;
 	height:80%;
 }
-.save-table-head {
-	height:10%;
-}
 .save-table-body {
-	height:90%;
-	border-top:1px solid #e4e4e4;
+	border-top:1px solid #97d4e5;
+	border-collapse:collapse;
 }
 .save-table-th-col {
 	text-align:right;
@@ -51,20 +48,38 @@
 .save-table-th-row {
 	text-align:left;
 	font-weight:normal;
-	font-style:italics;
+	font-style:italic;
 }
 .save-table-th-row, .save-table td {
 	font-family:Courier,"Courier New",monospace;
 	font-weight:bold;
 	color:#e4e4e4;
-	padding:4px;
+	padding:4px 8px;
 }
 .save-table td {
 	text-align:right;
 }
-
-
-
+.save-table-cell-border {
+	border-right:1px solid #97d4e5;
+}
+.space-fill {
+	width:100%;
+}
+.icon-btn {
+	border:0 none transparent;
+	background-color:rgba(0,0,0,0);
+	cursor:pointer;
+	vertical-align:middle;
+}
+.icon {
+	height:24px;
+}
+.new-save-container {
+	margin-top:8px;
+}
+input.new-save-input {
+	background-color:#1a1b1c;
+}
 
 
 

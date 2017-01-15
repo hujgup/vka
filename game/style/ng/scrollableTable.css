@@ -1,0 +1,10 @@
+.scrollable-table > thead {
+	display:block;
+	overflow-x:hidden;
+	overflow-y:hidden;
+}
+.scrollable-table > tbody {
+	display:block;
+	overflow-x:hidden;
+	overflow-y:scroll;
+}
