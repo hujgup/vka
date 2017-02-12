@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.10.0.0 (1)
+## v0.11.0.0 (1)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,7 +10,12 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.10.0.0 (current)
+## v0.11.0.0 (current)
+* Added JS object extensions API.
+* Moved event emitter to its own JS file.
+* Made log scrolling smooth.
+
+## v0.11.0.0
 * Added transitions API for things like fading out an image.
 
 ## v0.9.2.0

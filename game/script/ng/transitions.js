@@ -1,27 +1,3 @@
-function Emitter(bindTo) {
-	var _events = {};
-
-	this.registerEvent = function(name) {
-		_events[name] = [];
-	};
-	this.dispatchEvent = function(name,args) {
-		args.sender = bindTo;
-		_events[name].forEach(function(callback) {
-			callback(args);
-		});
-	};
-
-	bindTo.addEventListener(name,callback) {
-		_events[name].push(callback);
-	};
-	bindTo.removeEventListener(name,callback) {
-		var index = _events[name].indexOf(callback);
-		if (index !== -1) {
-			_events[name].splice(index,1);
-		}
-	};
-}
-
 function Transition(time,tickRate) {
 	var _emitter = new Emitter(this);
 	var _evtBegin = "begin";
@@ -38,19 +14,25 @@ function Transition(time,tickRate) {
 	this.notImplemented = function() {
 		throw new Error("Abstract method not implemented.");
 	};
-	this.onBegin = function(element) {
+	this.setupArgs = function(element,args) {
+		return args;
 	};
-	this.onUpdate = function(element,fracTime) {
+	this.onBegin = function(element,args) {
 	};
-	this.onEnd = function(element) {
+	this.onUpdate = function(element,fracTime,args) {
+	};
+	this.onEnd = function(element,args) {
 	};
 
 	this.apply = function(element) {
+		var args = arguments;
 		return new Promise(function(resolve,reject) {
 			try {
-				_this.onBegin(element);
+				args = _this.setupArgs(element,E.arrayLike.toArray(args).slice(1));
+				_this.onBegin(element,args);
 				_emitter.dispatchEvent(_evtBegin,{
-					element: element
+					element: element,
+					args: args
 				});
 				var startTime = Date.now();
 				var currentTime;
@@ -61,16 +43,18 @@ function Transition(time,tickRate) {
 					changeTime = currentTime - startTime;
 					if (changeTime < _this.time) {
 						fracTime = changeTime/_this.time;
-						_this.onUpdate(element,);
+						_this.onUpdate(element,fracTime,args);
 						_emitter.dispatchEvent(_evtUpdate,{
 							element: element,
-							fracTime: fracTime
+							fracTime: fracTime,
+							args: args
 						});
 					} else {
 						clearInterval(timer);
-						_this.onEnd(element);
+						_this.onEnd(element,args);
 						_emitter.dispatchEvent(_evtEnd,{
-							element: element
+							element: element,
+							args: args
 						});
 						resolve();
 					}
@@ -78,6 +62,8 @@ function Transition(time,tickRate) {
 			} catch (e) {
 				reject(e);
 			}
+		},function(e) {
+			console.error(e);
 		});
 	};
 }
@@ -88,9 +74,7 @@ function FadeInTransition(time,tickRate) {
 	this.onBegin = function(element) {
 		element.style.opacity = 0;
 	};
-	this.onUpdate = function(element,fracTime) {
-		this.notImplemented();
-	};
+	this.onUpdate = this.notImplemented;
 	this.onEnd = function(element) {
 		element.style.opacity = 1;
 	};
@@ -113,9 +97,7 @@ function FadeOutTransition(time,tickRate) {
 	this.onBegin = function(element) {
 		element.style.opacity = 1;
 	};
-	this.onUpdate = function(element,fracTime) {
-		this.notImplemented();
-	};
+	this.onUpdate = this.notImplemented;
 	this.onEnd = function(element) {
 		element.style.opacity = 0;
 	};
@@ -132,4 +114,54 @@ function LinearFadeOutTransition(time,tickRate) {
 LinearFadeOutTransition.prototype = Object.create(FadeOutTransition.prototype);
 LinearFadeOutTransition.prototype.constructor = LinearFadeOutTransition;
 
+function SmoothScroll(time,tickRate) {
+	Transition.call(this,time,tickRate);
+
+	this.setupArgs = function(element,args) {
+		args =  {
+			endX: args[0],
+			endY: args[1],
+			isDelta: args[2]
+		};
+		if (args.isDelta) {
+			args.endX += element.scrollLeft;
+			args.endY += element.scrollTop;
+		}
+		args.xM = args.endX - element.scrollLeft;
+		args.xC = element.scrollLeft;
+		args.yM = args.endY - element.scrollTop;
+		args.yC = element.scrollTop;
+		return args;
+	};
+	this.smoothingModifier = this.notImplemented;
+	this.onUpdate = function(element,fracTime,args) {
+		fracTime = this.smoothingModifier(fracTime);
+		element.scrollLeft = args.xM*fracTime + args.xC;
+		element.scrollTop = args.yM*fracTime + args.yC;
+	};
+	this.onEnd = function(element,args) {
+		element.scrollLeft = args.endX;
+		element.scrollTop = args.endY;
+	};
+}
+SmoothScroll.prototype = Object.create(Transition.prototype);
+SmoothScroll.prototype.constructor = SmoothScroll;
+function LinearSmoothScroll(time,tickRate) {
+	SmoothScroll.call(this,time,tickRate);
+
+	this.smoothingModifier = function(fracTime) {
+		return fracTime;
+	};
+}
+LinearSmoothScroll.prototype = Object.create(SmoothScroll.prototype);
+LinearSmoothScroll.prototype.constructor = LinearSmoothScroll;
+function SrqtSmoothScroll(time,tickRate) {
+	SmoothScroll.call(this,time,tickRate);
+
+	this.smoothingModifier = function(fracTime) {
+		return Math.sqrt(fracTime);
+	};
+}
+SrqtSmoothScroll.prototype = Object.create(SmoothScroll.prototype);
+SrqtSmoothScroll.prototype.constructor = SrqtSmoothScroll;
 

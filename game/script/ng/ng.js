@@ -2690,6 +2690,7 @@ Object.defineProperty(this,"Engine",{
 				_history.forEach(function(element) {
 					element.render();
 				});
+				_this.logScroll();
 			};
 			this.getSaveObject = function() {
 				return _history.map(function(element) {
@@ -2771,7 +2772,7 @@ Object.defineProperty(this,"Engine",{
 						refElement = lastElement;
 					}
 				}
-				_logEle.scrollTop = refElement.offsetTop;
+				_logScrollTo = refElement.offsetTop;
 			}
 			if (saveToHistory) {
 				LogHistory.pushHtml(str,false);
@@ -2784,6 +2785,11 @@ Object.defineProperty(this,"Engine",{
 				msg += " ("+e.configStack.join()+")";
 			}
 			_this.logPushRawString(msg);
+		};
+		var _logScrollTo;
+		this.logScroll = function() {
+			var ss = new SrqtSmoothScroll(1000);
+			ss.apply(_logEle,0,_logScrollTo);
 		};
 		// TODO: Move mipmapping stuff down here
 		var ActionDropdown = function(action,container,parent) {
@@ -2830,6 +2836,7 @@ Object.defineProperty(this,"Engine",{
 												_this.logPushRawString("<p><em>"+components+"</em></p>");
 												ActionManager.update();
 												subAction.command.execute(true);
+												_this.logScroll();
 											});
 										_this2.child.appendChild(button);
 									container.appendChild(_this2.child);
@@ -3428,6 +3435,7 @@ Object.defineProperty(this,"Engine",{
 					_this.logPushNoBreak(_this.Consts.localization.configKeys.INITIAL);
 					_invEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_INV);
 					_questsEle.innerHTML = _this.LocalizationMap.getString(_this.Consts.localization.configKeys.TITLE_QUESTS);
+					_this.logScroll();
 					_setupActionsUI();
 					_getCurrentRoom().getImage().display();
 				}
