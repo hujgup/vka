@@ -125,6 +125,9 @@ function ImmutableArray(mutableArr,transform) {
 	var _transform = typeof transform === "function" ? transform : function(value) {
 		return value;
 	};
+	var _mapTransform = function(value) {
+		return _transform(value);
+	};
 	var _this = this;
 
 	Object.defineProperty(this,"length",{
@@ -137,103 +140,94 @@ function ImmutableArray(mutableArr,transform) {
 		return _transform(_arr[i]);
 	};
 	this.clone = function() {
-		return _arr.slice(0);
+		return _arr.map(_mapTransform);
 	};
 	this.concat = function() {
-		var res = this.clone();
+		var res = E.array.shallowClone(_arr);
 		for (var i = 0; i < arguments.length; i++) {
 			res = res.concat(arguments[i]);
 		}
-		return res;
+		return res.map(_mapTransform);
 	};
-	this.every = function(callback) {
-		var res = true;
-		for (var i = 0; res && i < _arr.length; i++) {
-			res = callback(_transform(_arr[i]),i,this);
-		}
-		return res;
+	this.every = function(callback,thisArg) {
+		return _arr.every(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
-	this.filter = function(callback) {
-		var res = [];
-		for (var i = 0; i < _arr.length; i++) {
-			if (callback(_transform(_arr[i]),i,this)) {
-				res.push(_arr[i]);
-			}
-		}
-		return res;
+	this.filter = function(callback,thisArg) {
+		return _arr.filter(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
-	this.find = function(callback) {
-		var index = this.findIndex(callback);
-		return index !== -1 ? _arr[index] : undefined;
+	this.find = function(callback,thisArg) {
+		return _arr.find(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
-	this.findIndex = function(callback) {
-		var res = -1;
-		for (var i = 0; i < _arr.length; i++) {
-			if (callback(_transform(_arr[i]),i,this)) {
-				res = i;
-				break;
-			}
-		}
-		return res;
+	this.findIndex = function(callback,thisArg) {
+		return _arr.findIndex(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
-	this.forEach = function(callback) {
-		for (var i = 0; i < _arr.length; i++) {
-			callback(_transform(_arr[i]),i,this);
-		}
+	this.forEach = function(callback,thisArg) {
+		_arr.forEach(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
+	};
+	this.hasIndex = function(index) {
+		return typeof index === "number" && _arr.hasOwnProperty(index);
 	};
 	this.indexOf = function(searchElement,fromIndex) {
-		return _arr.indexOf(searchElement,fromIndex);
+		fromIndex = E.default.premade.isNumber(fromIndex,0);
+		return _this.findIndex(function(value,index) {
+			return index >= fromIndex && value === searchElement;
+		});
 	};
 	this.join = function(joiner) {
-		return _arr.join(joiner);
+		return _arr.map(_mapTransform).join(joiner);
 	};
 	this.lastIndexOf = function(searchElement,fromIndex) {
-		return _arr.lastIndexOf(searchElement,fromIndex);
-	};
-	this.map = function(callback) {
-		var res = [];
-		this.forEach(function(currentValue,index,array) {
-			res.push(callback(currentValue,index,array));
-		});
+		fromIndex = E.default.premade.isNumber(fromIndex,0);
+		var res = -1;
+		for (var i = _arr.length - 1; i >= 0; i--) {
+			if (_transform(_arr[i]) === searchElement) {
+				res = i;
+				i = -1;
+			}
+		}
 		return res;
+	};
+	this.map = function(callback,thisArg) {
+		return _arr.map(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
 	this.reduce = function(callback,initialValue) {
-		var res;
-		if (_arr.length !== 0) {
-			var hasInitVal = typeof initialValue !== "undefined";
-			res = hasInitVal ? initialValue : _transform(_arr[0]);
-			for (var i = hasInitVal ? 0 : 1; i < _arr.length; i++) {
-				res = callback(res,_transform(_arr[i]),i,this);
-			}
-		}
-		return res;
+		return _arr.reduce(function(accumulator,value,index) {
+			return callback(accumulator,_transform(value),index,_this);
+		},initialValue);
 	};
 	this.reduceRight = function(callback,initialValue) {
-		var res;
-		if (_arr.length !== 0) {
-			var hasInitVal = typeof initialValue !== "undefined";
-			res = hasInitVal ? initialValue : _transform(_arr[_arr.length - 1]);
-			for (var i = _arr.length - (hasInitVal ? 1 : 2); i >= 0; i--) {
-				res = callback(res,_transform(_arr[i]),i,this);
-			}
-		}
-		return res;
+		return _arr.reduceRight(function(accumulator,value,index) {
+			return callback(accumulator,_transform(value),index,_this);
+		},initialValue);
 	};
 	this.slice = function(begin,end) {
-		return _arr.slice(begin,end);
+		return _arr.slice(begin,end).map(_mapTransform);
 	};
-	this.some = function(callback) {
-		var res = false;
-		for (var i = 0; !res && i < _arr.length; i++) {
-			res = callback(_transform(_arr[i]),i,this);
-		}
-		return res;
+	this.some = function(callback,thisArg) {
+		return _arr.some(function(value,index) {
+			return callback.call(this,_transform(value),index,_this);
+		},thisArg);
 	};
 	this.toString = function() {
-		return _arr.toString();
+		return _arr.map(_mapTransform).toString();
 	};
 	this.toLocaleString = function() {
-		return _arr.toLocaleString();
+		return _arr.map(_mapTransform).toLocaleString();
+	};
+	this[Symbol.iterator] = function() {
+		return _arr[Symbol.iterator]();
 	};
 }
 
@@ -241,20 +235,10 @@ function ImmutableObject(obj) {
 	var _obj = obj;
 
 	this.clone = function() {
-		var res = {};
-		for (var key in _obj) {
-			if (_obj.hasOwnProperty(key)) {
-				res[key] = _obj[key];
-			}
-		}
-		return res;
+		return E.jsonObject.shallowClone(_obj);
 	};
-	this.forEach = function(callback) {
-		for (var key in _obj) {
-			if (_obj.hasOwnProperty(key)) {
-				callback(key,_obj[key]);
-			}
-		}
+	this.forEach = function(callback,thisArg) {
+		E.jsonObject.forEach(_obj,callback,thisArg);
 	};
 	this.get = function(key) {
 		return _obj[key];
@@ -276,6 +260,9 @@ function ImmutableObject(obj) {
 	};
 	this.valueOf = function() {
 		return _obj.valueOf();
+	};
+	this[Symbol.iterator] = function() {
+		return E.jsonObject.Iterator(_obj);
 	};
 }
 
@@ -1495,6 +1482,7 @@ var COM = new (function() {
 			return res;
 		});
 
+		str = typeof str === "string" ? str : "";
 		var contents = ConfigParser.prepareContents(str,_this.GLOBAL_BLOCK_NAME);
 		_globalNode = new _this.Node(contents.str,contents.newLine,this);
 	});

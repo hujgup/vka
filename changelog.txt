@@ -2,7 +2,7 @@
 ## VKA CHANGELOG ##
 ###################
 
-## v0.11.0.0 (1)
+## v0.12.0.0 (1)
 
 ## Pre-release version number semantics: v0.a.b.c (d)
 * a: Added new features.
@@ -10,7 +10,28 @@
 * c: Bugfixes.
 * d: Commit number. Starts at 1 and increments every commit. Resets on a new version number.
 
-## v0.11.0.0 (current)
+## v0.12.0.0 (current)
+* Added check that graph edge origin/dest rooms exist.
+* Added browser support table to index page.
+* Added ES5/ES6 polyfills (core-js shim).
+* Added Node event API to abstract the "event, firstEvent" callbacks.
+* Added Room events: enter, exit.
+* Room state is now saved.
+* Defined an iterator for the Graph object.
+* Refactored logging methods to reduce the number of if statements made by callers.
+* Refactored ng.js and ImmutableX objects to use methods provided by extensions.js when possible.
+* Refactored ng.js to use ES5 iteration functions (or extension.js equivelants) over for loops whenever possible.
+* Changed the log scrolling method to now accept an optional argument to allow for manual scrolling.
+* Moved logging methods to an object context.
+* Removed EngineCommand instance node enforce method aliases.
+* Removed a bunch of redundant/out-of-date TODOs from ng.js.
+* Localized runtime error logging.
+* Object closure is now done through an extension function.
+* Passing no arguments to new COM.Map now has the same result as passing the empty string.
+* Fixed bug where the confirm dialogue for creating a save was referencing an undefined localization key.
+* Fixed bug where undefined keys were being used as save game metadata keys.
+
+## v0.11.0.0
 * Added JS object extensions API.
 * Moved event emitter to its own JS file.
 * Made log scrolling smooth.

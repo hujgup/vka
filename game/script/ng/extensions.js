@@ -37,21 +37,42 @@ Object.defineProperty(this,"E",{
 				isNotNullOrUndefined: function(obj,fallback) {
 					return this.freeform(obj,fallback,_undefOrNullCnd);
 				},
+				isBool: function(obj,fallback) {
+					return this.isTypeOf(obj,fallback,"boolean");
+				},
+				isNumber: function(obj,fallback) {
+					return this.isTypeOf(obj,fallback,"number");
+				},
+				isString: function(obj,fallback) {
+					return this.isTypeOf(obj,fallback,"string");
+				},
+				isArray: function(obj,fallback) {
+					return this.freeform(obj,fallback,Array.isArray);
+				},
+				isFunc: function(obj,fallback) {
+					return this.isTypeOf(obj,fallback,"function");
+				},
+				isObject: function(obj,fallback) {
+					return this.isTypeOf(obj,fallback,"object");
+				},
 				isInstanceOf: function(obj,fallback,ctor) {
 					return this.freeform(obj,fallback,function(o) {
 						return o instanceof ctor;
 					});
+				},
+				isRegex: function(obj,fallback) {
+					return this.isInstanceOf(obj,fallback,ctor);
 				}
 			};
 			var _setFunc = function(obj,func) {
 				return function() {
-					func.apply(obj,arguments);
+					return func.apply(obj,arguments);
 				};
 			};
 			var _applyFuncs = function(obj) {
 				for (var key in _funcs) {
 					if (_funcs.hasOwnProperty(key)) {
-						obj[key] = _setFunc(_funcs[key]);
+						obj[key] = _setFunc(obj,_funcs[key]);
 					}
 				}
 			};
@@ -71,7 +92,7 @@ Object.defineProperty(this,"E",{
 			});
 		});
 		var _iterationCallback = function(callback,thisArg,value,key,instance) {
-			return typeof thisArg !== "undefined" ? callback.call(thisArg,value,key,instance) : callback(value,key,instance);
+			return callback.call(thisArg,value,key,instance);
 		};
 		var _everyOrSome = function(obj,callback,thisArg,iterator) {
 			return !iterator(obj,function(value,key) {
@@ -88,7 +109,7 @@ Object.defineProperty(this,"E",{
 			return _filter(obj,function(value,key) {
 				return true;
 			},undefined,iterator,mapObj,function(mo,value,key) {
-				assigner(mapObj,_iterationCalback(callback,thisArg,value,key,obj),key,obj);
+				assigner(mapObj,_iterationCallback(callback,thisArg,value,key,obj),key,obj);
 			});
 		};
 		var _filter = function(obj,callback,thisArg,iterator,mapObj,assigner) {
@@ -163,29 +184,34 @@ Object.defineProperty(this,"E",{
 				return res;
 			};
 			this.every = function(obj,callback,thisArg) {
-				return _everyOrSome(obj,callback,thisArg,this.some);
+				return _everyOrSome(obj,callback,thisArg,_this2.some);
 			};
 			this.forEach = function(obj,callback,thisArg) {
-				_forEach(obj,callback,thisArg,this.some,false);
+				_forEach(obj,callback,thisArg,_this2.some,false);
 			};
 			this.map = function(obj,callback,thisArg) {
-				return _map(obj,callback,thisArg,this.forEach,{},function(mapObj,item) {
+				return _map(obj,callback,thisArg,_this2.forEach,{},function(mapObj,item) {
 					mapObj[item.key] = item.value;
 				});
 			};
+			this.mapToArray = function(obj,callback,thisArg) {
+				return _map(obj,callback,thisArg,_this2.forEach,[],function(mapObj,item) {
+					mapObj.push(item);
+				});
+			};
 			this.filter = function(obj,callback,thisArg) {
-				return _filter(obj,callback,thisArg,this.forEach,{},function(mapObj,value,key) {
+				return _filter(obj,callback,thisArg,_this2.forEach,{},function(mapObj,value,key) {
 					mapObj[key] = value;
 				});
 			};
 			this.reduce = function(obj,callback,initialValue) {
-				return _reduce(obj,callback,initialValue,this.forEach);
+				return _reduce(obj,callback,initialValue,_this2.forEach);
 			};
 			this.findKey = function(obj,callback,thisArg) {
-				return _findIndex(obj,callback,thisArg,this.some,undefined,false);
+				return _findIndex(obj,callback,thisArg,_this2.some,undefined,false);
 			};
 			this.find = function(obj,callback,thisArg) {
-				return _find(obj,callback,thisArg,this.findKey,undefined);
+				return _find(obj,callback,thisArg,_this2.findKey,undefined);
 			};
 			this.shallowClone = function(obj) {
 				return _this2.map(obj,function(value,key) {
@@ -197,6 +223,29 @@ Object.defineProperty(this,"E",{
 			};
 			this.deepClone = function(obj) {
 				return JSON.parse(JSON.stringify(obj));
+			};
+			this.countKeys = function(obj) {
+				return _this2.reduce(obj,function(n) {
+					n++;
+				},0);
+			};
+			this.isEmpty = function(obj) {
+				return _this2.countKeys(obj) === 0;
+			};
+			this.Iterator = function(obj) {
+				var _keys = _this2.mapToArray(obj,function(value,key) {
+					return key;
+				});
+				var _index = -1;
+				this.next = function() {
+					var res = {
+						done: ++_index >= _keys.length
+					};
+					if (!res.done) {
+						res.value = obj[_keys[_index]];
+					}
+					return res;
+				};
 			};
 		});
 		this.number = close(function() {
@@ -226,7 +275,7 @@ Object.defineProperty(this,"E",{
 				return (new DOMParser()).parseFromString(str,"text/html");
 			};
 			this.getRenderedTextDimensions = function(str,cssFont,asHtml) {
-				asHtml = typeof asHtml === "boolean" ? asHtml : false;
+				asHtml = _this.default.premade.isBool(asHtml,false);
 				var div = document.createElement("div");
 					div.style.width = "auto";
 					div.style.height = "auto";
@@ -305,6 +354,9 @@ Object.defineProperty(this,"E",{
 			this.localeCompareCaseInsensitive = function(a,b) {
 				return a.toLowerCase().localeCompare(b.toLowerCase());
 			};
+			this.isEmpty = function(str) {
+				return str.length === 0;
+			};
 		});
 		this.array = close(function() {
 			var _this2 = this;
@@ -375,22 +427,22 @@ Object.defineProperty(this,"E",{
 				return Array.prototype.slice.call(arr);
 			};
 			this.deepClone = function(arr,cloner) {
-				return _this.array.map(arr,cloner);
+				return _this2.map(arr,cloner);
 			};
 			this.getArithmeticMean = function(arr) {
-				return _this.array.reduce(arr,function(mean,value) {
+				return _this2.reduce(arr,function(mean,value) {
 					mean += value/arr.length;
 					return mean;
 				},0);
 			};
 			this.getGeometricMean = function(arr) {
-				return _thus.array.reduce(arr,function(mean,value) {
+				return _this2.reduce(arr,function(mean,value) {
 					mean *= sqrt(value);
 					return mean;
 				},1);
 			};
 			this.getHarmonicMean = function(arr) {
-				return arr.length/_this.array.reduce(arr,function(mean,value) {
+				return arr.length/_this2.reduce(arr,function(mean,value) {
 					mean += 1/value;
 					return mean;
 				},0);
@@ -398,7 +450,7 @@ Object.defineProperty(this,"E",{
 			this.getMedian = function(arr) {
 				var res;
 				if (arr.length > 1) {
-					arr = this.shallowClone(arr).sort(_this.number.compare);
+					arr = _this2.shallowClone(arr).sort(_this.number.compare);
 					var l2 = arr.length/2;
 					if (arr.length%2 === 0) {
 						res = arr[l2];
@@ -411,7 +463,7 @@ Object.defineProperty(this,"E",{
 				return res;
 			};
 			this.remove = function(arr,item) {
-				return this.removeByIndex(arr,arr.indexOf(item));
+				return _this2.removeByIndex(arr,arr.indexOf(item));
 			};
 			this.removeByIndex = function(arr,index) {
 				var res = index >= 0 && index < arr.length;
@@ -432,6 +484,14 @@ Object.defineProperty(this,"E",{
 			this.map = function(arr,callback,thisArg) {
 				return Array.prototype.map.call(arr,callback,thisArg);
 			};
+			this.mapToJsonObject = function(arr,callback,thisArg) {
+				var item;
+				return _this2.reduce(arr,function(mapObj,value,key) {
+					item = _iterationCallback(callback,thisArg,value,key,arr);
+					mapObj[item.key] = item.value;
+					return mapObj;
+				},{});
+			};
 			this.filter = function(arr,callback,thisArg) {
 				return Array.prototype.filter.call(arr,callback,thisArg);
 			};
@@ -448,15 +508,15 @@ Object.defineProperty(this,"E",{
 				return Array.prototype.find.call(arr,callback,thisArg);
 			};
 			this.inlineMap = function(arr,callback,thisArg) {
-				_this.array.forEach(arr,function(value,index) {
+				_this2.forEach(arr,function(value,index) {
 					arr[index] = _iterationCallback(callback,thisArg,arr[index],index,arr);
 				});
 			};
 			this.inlineFilter = function(arr,callback,thisArg) {
-				this.inlineFilterRetainKeys(arr,callback,thisArg);
+				_this2.inlineFilterRetainKeys(arr,callback,thisArg);
 				// Compress elements
 				var i = 0;
-				_this.array.forEach(arr,function(value,index) {
+				_this2.forEach(arr,function(value,index) {
 					arr[i] = arr[index];
 					i++;
 				});
@@ -464,20 +524,23 @@ Object.defineProperty(this,"E",{
 				arr.length = i;
 			};
 			this.inlineFilterRetainKeys = function(arr,callback,thisArg) {
-				_this.array.forEach(arr,function(value,index) {
+				_this2.forEach(arr,function(value,index) {
 					if (!_iterationCallback(callback,thisArg,value,index,arr)) {
 						delete arr[index];
 					}
 				});
 			};
 			this.trimAll = function(arr) {
-				this.inlineMap(arr,function(value) {
+				_this2.inlineMap(arr,function(value) {
 					return value.trim();
 				});
 			};
 			this.insertArray = function(arr,toInsert,start,deleteCount) {
 				deleteCount = _this.default.premade.isTypeOf(deleteCount,0,"number");
 				arr.splice.apply(arr,[start,deleteCount].concat(toInsert));
+			};
+			this.isEmpty = function(arr) {
+				return arr.length === 0;
 			};
 		});
 		this.arrayLike = close(function() {
@@ -556,7 +619,7 @@ Object.defineProperty(this,"E",{
 				return _this.array.find(arr,callback,thisArg);
 			};
 			this.extract = function(arr,key) {
-				return this.map(arr,function(value) {
+				return _this2.map(arr,function(value) {
 					return value[key];
 				});
 			};
@@ -583,8 +646,8 @@ Object.defineProperty(this,"E",{
 				var occurances = [];
 				var modeNumber = 0;
 				var index;
-				this.forEach(arr,function(value) {
-					index = this.indexOf(values,value,equalityChecker);
+				_this2.forEach(arr,function(value) {
+					index = _this2.indexOf(values,value,equalityChecker);
 					if (index !== -1) {
 						occurances[index]++;
 					} else {
@@ -622,13 +685,18 @@ Object.defineProperty(this,"E",{
 				return Array.prototype.lastIndexOf.call(arr,item);
 			};
 			this.contains = function(arr,item) {
-				return this.indexOf(arr,item) !== -1;
+				return _this2.indexOf(arr,item) !== -1;
 			};
 			this.slice = function(arr,begin,end) {
 				return Array.prototype.slice.call(arr,begin,end);
 			};
 			this.splice = function(arr,start,deleteCount) {
-				return Array.prototype.splice.apply(arr,this.slice(arguments,1));
+				return Array.prototype.splice.apply(arr,_this2.slice(arguments,1));
+			};
+			this.isEmpty = function(arr) {
+				return _this2.every(arr,function() {
+					return false;
+				});
 			};
 		});
 		this.iteratable = close(function() {
@@ -637,46 +705,58 @@ Object.defineProperty(this,"E",{
 				mapObj.push(value);
 			};
 			this.toArray = function(iteratable) {
-				return this.map(iteratable,function(value) {
+				return _this2.map(iteratable,function(value) {
 					return value;
 				});
 			};
-			this.equals = function() {
-
+			this.equals = function(a,b) {
+				return _this.array.equals(_this2.toArray(a),_this2.toArray(b));
 			};
-			this.softEquals = function() {
-
+			this.softEquals = function(a,b) {
+				return _this.array.softEquals(_this2.toArray(a),_this2.toArray(b));
 			};
 			this.forEach = function(iteratable,callback,thisArg) {
+				if (iteratable.hasOwnProperty(Symbol.iterator)) {
+					iteratable = iteratable[Symbol.iterator]();
+				}
 				var v = iteratable.next();
 				while (!v.done) {
 					_iterationCallback(callback,thisArg,v.value,iteratable);
+					v = iteratable.next();
 				}
 			};
 			this.every = function(iteratable,callback,thisArg) {
 				var res = true;
-				this.forEach(iteratable,function(value) {
+				_this2.forEach(iteratable,function(value) {
 					if (res) {
 						res = _iterationCallback(callback,thisArg,valuemiteratable);
 					}
 				});
 			};
 			this.some = function(iteratable,callback,thisArg) {
-				return _everyOrSome(iteratable,callback,thisArg,this.every);
+				return _everyOrSome(iteratable,callback,thisArg,_this2.every);
 			};
 			this.map = function(iteratable,callback,thisArg) {
-				return _map(iteratable,callback,thisArg,this.forEach,[],_assigner);
+				return _map(iteratable,callback,thisArg,_this2.forEach,[],_assigner);
+			};
+			this.mapToJsonObject = function(iteratable,callback,thisArg) {
+				var item;
+				return _this2.reduce(iteratable,function(obj,value,key) {
+					item = _iterationCallback(callback,thisArg,value,key,iteratable);
+					obj[item.key] = item.value;
+					return obj;
+				},{});
 			};
 			this.filter = function(iteratable,callback,thisArg) {
-				return _filter(iteratable,callback,thisArg,this.forEach,[],_assigner);
+				return _filter(iteratable,callback,thisArg,_this2.forEach,[],_assigner);
 			};
 			this.reduce = function(iteratable,callback,initialValue) {
-				return _reduce(iteratable,callback,initialValue,this.forEach);
+				return _reduce(iteratable,callback,initialValue,_this2.forEach);
 			};
 			this.find = function(iteratable,callback,thisArg) {
 				var res;
 				var brk;
-				this.some(iteratable,function(value) {
+				_this2.some(iteratable,function(value) {
 					brk = _iterationCallback(callback,thisArg,value,iteratable);
 					if (brk) {
 						res = value;
@@ -684,6 +764,11 @@ Object.defineProperty(this,"E",{
 					return brk;
 				});
 				return res;
+			};
+			this.isEmpty = function(iteratable) {
+				return _this2.every(iteratable,function() {
+					return false;
+				});
 			};
 		});
 		this.node = close(function() {
@@ -703,7 +788,7 @@ Object.defineProperty(this,"E",{
 			};
 			this.insertAfter = function(node,newNode,referenceNode) {
 				if (referenceNode === null) {
-					this.prependChild(node,newNode);
+					_this2.prependChild(node,newNode);
 				} else {
 					var index = _this.arrayLike.indexOf(node.childNodes,referenceNode);
 					if (index !== -1) {
@@ -726,6 +811,16 @@ Object.defineProperty(this,"E",{
 			var _this2 = this;
 			this.constructorApply = function(ctor) {
 				return new (Function.prototype.bind.apply(ctor,_this.arrayLike.splice(arguments,1)));
+			};
+			this.close = function(ctor,baseClasses) {
+				baseClasses = _this.default.build.isArray(baseClasses,function() {
+					return typeof baseClasses === "object" ? [baseClasses] : [];
+				});
+				baseClasses.forEach(function(bc) {
+					ctor.prototype = Object.create(bc.prototype);
+				});
+				ctor.prototype.constructor = ctor;
+				return close(ctor);
 			};
 		});
 	})(),

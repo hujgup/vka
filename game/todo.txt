@@ -1,17 +1,25 @@
-Fix bug where deleting a save slot doesn't remove that key from SaveGame.slotKeys
-	and corresponding storage entry
+Comment all the JavaScript files
 
-Enumerate all ng.js code and use E methods when possible.
+Minify save game keys
 
-More events
-	Room onEnter, onExit
-	+ First occurance versions
+Style the save/load button
 
 Move action perform button to new line
 
 Fix bug where action perform button is too tall
 
 Fix bug where @actionsRemove isn't working properly
+
+Only show "Move", "Examine", and "Interact" actions if there are available sub-actions
+
+Check CSS compatability
+	Chrome 45
+	Firefox 45
+	IE 11 + Edge
+	Safari 9
+	Opera 42
+
+Refactor error reporting so that one error doesn't stop others from being reported
 
 Add support for rooms that play audio.
 

@@ -48,6 +48,43 @@
 			</ul>
 			<p><a href="game">Click here to begin playing.</a></p>
 		</section>
+		<hr />
+		<section>
+			<h2>Supported Browsers</h3>
+			<p>If you are not using one of the following browsers, or are using an unsupported version of said browsers, the game is not guaranteed to work correctly. If you are unsure what browser you're using, check out <a target="_blank" href="https://www.whatismybrowser.com/">this website<.</p>
+			<table class="hs-table">
+				<tr>
+					<th scope="col">Browser</th>
+					<th scope="col">Supported Version(s)</th>
+				</tr>
+				<tr>
+					<th scope="row">Chrome</th>
+					<td>45 or newer</td>
+				</tr>
+				<tr>
+					<th scope="row">Firefox</th>
+					<td>45 or newer</td>
+				</tr>
+				<tr>
+					<th scope="row">Internet Explorer/Edge</th>
+					<td>11 or newer</td>
+				</tr>
+				<tr>
+					<th scope="row">Safari</th>
+					<td>9 or newer</td>
+				</tr>
+				<tr>
+					<th scope="row">Opera</th>
+					<td>42 or newer</td>
+				</tr>
+<!--
+				<tr>
+					<th scope="row">x</th>
+					<td>x</td>
+				</tr>
+-->
+			</table>
+		</section>
 	</article>
 </body>
 </html>
